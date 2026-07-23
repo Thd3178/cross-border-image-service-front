@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { imageApi, type ItemStatus, type TaskItem } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
+import { RiArrowGoBackLine } from "@remixicon/react"
 
 // ─── Constants ───
 
@@ -45,6 +47,7 @@ const VERDICT_LABEL: Record<Verdict, string> = {
 
 export default function ItemDetailPage() {
   const { itemId } = useParams<{ itemId: string }>()
+  const navigate = useNavigate()
   const [item, setItem] = useState<TaskItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -104,6 +107,18 @@ export default function ItemDetailPage() {
 
   return (
     <div className="container mx-auto p-6">
+      {/* ── Back button ── */}
+      <div className="mb-4 flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="-ml-2 shrink-0"
+          onClick={() => navigate(-1)}
+        >
+          <RiArrowGoBackLine className="size-5" />
+        </Button>
+        <h1 className="text-lg font-medium">商品详情</h1>
+      </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* ── Left: Image Pipeline ── */}
         <div className="flex flex-col gap-6">
