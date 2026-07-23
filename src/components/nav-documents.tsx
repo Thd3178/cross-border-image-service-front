@@ -31,7 +31,7 @@ export function NavDocuments({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Documents</SidebarGroupLabel>
+      <SidebarGroupLabel>文档</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
@@ -49,7 +49,7 @@ export function NavDocuments({
                 >
                   <RiMoreLine
                   />
-                  <span className="sr-only">More</span>
+                  <span className="sr-only">更多</span>
                 </SidebarMenuAction>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -60,18 +60,18 @@ export function NavDocuments({
                 <DropdownMenuItem>
                   <RiFolderLine
                   />
-                  <span>Open</span>
+                  <span>打开</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <RiShareLine
                   />
-                  <span>Share</span>
+                  <span>分享</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive">
                   <RiDeleteBinLine
                   />
-                  <span>Delete</span>
+                  <span>删除</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -80,7 +80,7 @@ export function NavDocuments({
         <SidebarMenuItem>
           <SidebarMenuButton className="text-sidebar-foreground/70">
             <RiMoreLine className="text-sidebar-foreground/70" />
-            <span>More</span>
+            <span>更多</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

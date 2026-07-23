@@ -13,168 +13,76 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { RiDashboardLine, RiListUnordered, RiBarChartLine, RiFolderLine, RiGroupLine, RiCameraLine, RiFileTextLine, RiSettingsLine, RiQuestionLine, RiSearchLine, RiDatabase2Line, RiFileChartLine, RiFileLine, RiCommandLine } from "@remixicon/react"
+import {
+  RiDashboardLine,
+  RiImageLine,
+  RiListUnordered,
+  RiSettingsLine,
+  RiQuestionLine,
+  RiSearchLine,
+  RiCommandLine,
+  RiUploadCloudLine,
+} from "@remixicon/react"
+import { useAuth } from "@/lib/auth-context"
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
-      title: "Dashboard",
-      url: "#",
-      icon: (
-        <RiDashboardLine
-        />
-      ),
+      title: "仪表盘",
+      url: "/dashboard",
+      icon: <RiDashboardLine />,
     },
     {
-      title: "Lifecycle",
-      url: "#",
-      icon: (
-        <RiListUnordered
-        />
-      ),
+      title: "图片上传",
+      url: "/dashboard",
+      icon: <RiUploadCloudLine />,
     },
     {
-      title: "Analytics",
-      url: "#",
-      icon: (
-        <RiBarChartLine
-        />
-      ),
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: (
-        <RiFolderLine
-        />
-      ),
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: (
-        <RiGroupLine
-        />
-      ),
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: (
-        <RiCameraLine
-        />
-      ),
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: (
-        <RiFileTextLine
-        />
-      ),
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: (
-        <RiFileTextLine
-        />
-      ),
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
+      title: "任务列表",
+      url: "/dashboard",
+      icon: <RiListUnordered />,
     },
   ],
   navSecondary: [
     {
-      title: "Settings",
+      title: "设置",
       url: "#",
-      icon: (
-        <RiSettingsLine
-        />
-      ),
+      icon: <RiSettingsLine />,
     },
     {
-      title: "Get Help",
+      title: "帮助",
       url: "#",
-      icon: (
-        <RiQuestionLine
-        />
-      ),
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: (
-        <RiSearchLine
-        />
-      ),
+      icon: <RiQuestionLine />,
     },
   ],
   documents: [
     {
-      name: "Data Library",
-      url: "#",
-      icon: (
-        <RiDatabase2Line
-        />
-      ),
+      name: "1688 搜索结果",
+      url: "/dashboard",
+      icon: <RiSearchLine />,
     },
     {
-      name: "Reports",
-      url: "#",
-      icon: (
-        <RiFileChartLine
-        />
-      ),
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: (
-        <RiFileLine
-        />
-      ),
+      name: "处理结果",
+      url: "/dashboard",
+      icon: <RiImageLine />,
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth()
+
+  const currentUser = {
+    name: user?.nickname || user?.username || "用户",
+    email: `${user?.username || "user"}@example.com`,
+    avatar: "",
+  }
+
+  const navMainWithActive = data.navMain.map((item) => ({
+    ...item,
+    url: item.url,
+  }))
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -184,21 +92,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="#">
+              <a href="/dashboard">
                 <RiCommandLine className="size-5!" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <span className="text-base font-semibold">
+                  跨境商品图片处理
+                </span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMainWithActive} />
         <NavDocuments items={data.documents} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={currentUser} />
       </SidebarFooter>
     </Sidebar>
   )

@@ -1,5 +1,6 @@
 "use client"
 
+import type { DashboardStats } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -11,99 +12,105 @@ import {
 } from "@/components/ui/card"
 import { RiArrowUpLine, RiArrowDownLine } from "@remixicon/react"
 
-export function SectionCards() {
+function fmt(n: number): string {
+  if (n >= 1_0000) return (n / 1_0000).toFixed(1) + "万"
+  if (n >= 1000) return (n / 1000).toFixed(1) + "k"
+  return String(n)
+}
+
+function toCNY(n: number): string {
+  return "¥" + n.toFixed(2)
+}
+
+interface SectionCardsProps {
+  stats: DashboardStats
+}
+
+export function SectionCards({ stats }: SectionCardsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Total Revenue</CardDescription>
+          <CardDescription>图片处理总数</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            $1,250.00
+            {fmt(stats.completedTasks)}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              <RiArrowUpLine
-              />
-              +12.5%
+              <RiArrowUpLine />
+              {stats.completedTasks}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Trending up this month{" "}
+            累计处理{" "}
             <RiArrowUpLine className="size-4" />
           </div>
-          <div className="text-muted-foreground">
-            Visitors for the last 6 months
-          </div>
+          <div className="text-muted-foreground">所有已完成的图片处理任务</div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>New Customers</CardDescription>
+          <CardDescription>任务总数</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            1,234
+            {fmt(stats.totalTasks)}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              <RiArrowDownLine
-              />
-              -20%
+              <RiArrowUpLine />
+              {stats.totalTasks}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Down 20% this period{" "}
+            全部任务{" "}
+            <RiArrowUpLine className="size-4" />
+          </div>
+          <div className="text-muted-foreground">包含进行中和已完成</div>
+        </CardFooter>
+      </Card>
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>总支出</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {toCNY(stats.totalExpense)}
+          </CardTitle>
+          <CardAction>
+            <Badge variant="outline">
+              <RiArrowDownLine />
+              {toCNY(stats.totalExpense)}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            本月消耗{" "}
             <RiArrowDownLine className="size-4" />
           </div>
-          <div className="text-muted-foreground">
-            Acquisition needs attention
-          </div>
+          <div className="text-muted-foreground">包含 API 调用和资源费用</div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Active Accounts</CardDescription>
+          <CardDescription>上传背景</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            45,678
+            {fmt(stats.backgroundCount)}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              <RiArrowUpLine
-              />
-              +12.5%
+              <RiArrowUpLine />
+              {stats.backgroundCount}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Strong user retention{" "}
+            可用背景{" "}
             <RiArrowUpLine className="size-4" />
           </div>
-          <div className="text-muted-foreground">Engagement exceed targets</div>
-        </CardFooter>
-      </Card>
-      <Card className="@container/card">
-        <CardHeader>
-          <CardDescription>Growth Rate</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            4.5%
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <RiArrowUpLine
-              />
-              +4.5%
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Steady performance increase{" "}
-            <RiArrowUpLine className="size-4" />
-          </div>
-          <div className="text-muted-foreground">Meets growth projections</div>
+          <div className="text-muted-foreground">当前可选的背景模板数量</div>
         </CardFooter>
       </Card>
     </div>

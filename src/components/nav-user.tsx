@@ -78,24 +78,24 @@ export function NavUser({
               <DropdownMenuItem>
                 <RiUserLine
                 />
-                Account
+                账号
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <RiBankCardLine
                 />
-                Billing
+                账单
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <RiNotification3Line
                 />
-                Notifications
+                通知
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <RiLogoutBoxLine
               />
-              Log out
+              退出登录
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
