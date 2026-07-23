@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
   imageApi,
+  type ItemStatus,
   type Task,
   type TaskItem,
   type TaskStatus,
@@ -85,6 +86,34 @@ const ALLOW_ITEMS_STATUSES: ReadonlySet<TaskStatus> = new Set([
   "COMPLETED",
   "FAILED",
 ])
+
+// ─── Item status display ───
+
+const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
+  PENDING: "待处理",
+  SELECTED: "已选择",
+  SEGMENTING: "分割中",
+  SEGMENTED: "已分割",
+  ANALYZING: "质检中",
+  ANALYZED: "已质检",
+  COMPOSITING: "合成中",
+  COMPLETED: "已完成",
+  FAILED: "失败",
+  CANCELLED: "已取消",
+}
+
+const ITEM_STATUS_STYLE: Record<ItemStatus, string> = {
+  PENDING: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+  SELECTED: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  SEGMENTING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  SEGMENTED: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+  ANALYZING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  ANALYZED: "bg-teal-500/10 text-teal-500 border-teal-500/20",
+  COMPOSITING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  COMPLETED: "bg-green-500/10 text-green-500 border-green-500/20",
+  FAILED: "bg-red-500/10 text-red-500 border-red-500/20",
+  CANCELLED: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+}
 
 // ─── Image fallback ───
 
@@ -177,10 +206,21 @@ function ProductCard({
         >
           <Checkbox
             checked={selected}
-            onCheckedChange={() => onToggle(item.id)}
-            disabled={!selectingMode}
           />
         </div>
+      )}
+
+      {/* Status badge (非选择模式下显示) */}
+      {!selectingMode && item.status !== "PENDING" && (
+        <Badge
+          variant="outline"
+          className={cn(
+            "absolute left-2 top-2 z-10",
+            ITEM_STATUS_STYLE[item.status] ?? ""
+          )}
+        >
+          {ITEM_STATUS_LABEL[item.status] ?? item.status}
+        </Badge>
       )}
 
       <CardContent className="flex flex-col gap-0 p-0">
@@ -350,7 +390,7 @@ export default function TaskDetailPage() {
 
   // ── Derived state ──
 
-  const selectingMode = task?.status === "USER_SELECTING"
+  const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "USER_SELECTING"
   const viewDetailMode =
     task?.status === "PROCESSING" || task?.status === "COMPLETED"
   const showItems =
