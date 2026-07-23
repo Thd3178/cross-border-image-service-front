@@ -90,6 +90,11 @@ export default function DashboardPage() {
   const [isLoadingTasks, setIsLoadingTasks] = useState(true)
   const pageSize = 10
 
+  // ── Search params ──
+  const [priceMin, setPriceMin] = useState<string>("")
+  const [priceMax, setPriceMax] = useState<string>("")
+  const [sortFields, setSortFields] = useState<string>("")
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ── Fetch backgrounds ──
@@ -130,13 +135,11 @@ export default function DashboardPage() {
   }, [fetchTasks])
 
   // ── Auto-refresh for in-progress tasks ──
+  // Only refresh when user is on a page with in-progress tasks
   useEffect(() => {
     const hasInProgress = tasks.some(
       (t) =>
-        t.status === "PENDING" ||
         t.status === "SEARCHING" ||
-        t.status === "SEARCH_COMPLETED" ||
-        t.status === "USER_SELECTING" ||
         t.status === "PROCESSING"
     )
     if (!hasInProgress) return
@@ -188,7 +191,7 @@ export default function DashboardPage() {
 
   const handleUpload = useCallback(async () => {
     if (!selectedFile) {
-      toast.error("Please select an image first")
+      toast.error("请先选择图片")
       return
     }
     setIsUploading(true)
@@ -196,13 +199,16 @@ export default function DashboardPage() {
       const bgId = selectedBgId ? Number(selectedBgId) : undefined
       const res = await imageApi.upload(selectedFile, bgId)
       const data = res.data.data
-      toast.success(data.message || "Upload successful")
+      toast.success(data.message || "上传成功，正在搜索...")
       setSelectedFile(null)
       setPreviewUrl(null)
       setSelectedBgId("")
+      setPriceMin("")
+      setPriceMax("")
+      setSortFields("")
       fetchTasks(1)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Upload failed"
+      const message = err instanceof Error ? err.message : "上传失败"
       toast.error(message)
     } finally {
       setIsUploading(false)
@@ -289,51 +295,92 @@ export default function DashboardPage() {
           </div>
 
           {/* Background selection + Upload button */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex flex-1 flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                背景
-              </label>
-              <Select value={selectedBgId} onValueChange={setSelectedBgId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="无背景（透明）" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">无背景（透明）</SelectItem>
-                  {backgrounds.map((bg) => (
-                    <SelectItem key={bg.id} value={String(bg.id)}>
-                      <span className="flex items-center gap-2">
-                        {bg.thumbnailUrl && (
-                          <img
-                            src={bg.thumbnailUrl}
-                            alt=""
-                            className="size-5 rounded object-cover"
-                          />
-                        )}
-                        {bg.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  背景
+                </label>
+                <Select value={selectedBgId} onValueChange={setSelectedBgId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="无背景（透明）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">无背景（透明）</SelectItem>
+                    {backgrounds.map((bg) => (
+                      <SelectItem key={bg.id} value={String(bg.id)}>
+                        <span className="flex items-center gap-2">
+                          {bg.thumbnailUrl && (
+                            <img
+                              src={bg.thumbnailUrl}
+                              alt=""
+                              className="size-5 rounded object-cover"
+                            />
+                          )}
+                          {bg.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleUpload}
+                disabled={!selectedFile || isUploading}
+                className="mt-1 sm:mt-0"
+              >
+                {isUploading ? (
+                  <>
+                    <RiLoader4Line className="size-4 animate-spin" />
+                    上传中...
+                  </>
+                ) : (
+                  <>
+                    <RiUploadCloudLine className="size-4" />
+                    上传
+                  </>
+                )}
+              </Button>
             </div>
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || isUploading}
-              className="mt-1 sm:mt-0"
-            >
-              {isUploading ? (
-                <>
-                  <RiLoader4Line className="size-4 animate-spin" />
-                  上传中...
-                </>
-              ) : (
-                <>
-                  <RiUploadCloudLine className="size-4" />
-                  上传
-                </>
-              )}
-            </Button>
+
+            {/* 搜索筛选条件 */}
+            <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
+              <p className="text-xs font-medium text-muted-foreground">1688 搜索筛选（可选）</p>
+              <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-xs text-muted-foreground">价格</label>
+                  <input
+                    type="number"
+                    placeholder="最低"
+                    value={priceMin}
+                    onChange={(e) => setPriceMin(e.target.value)}
+                    className="h-7 w-20 rounded border bg-background px-2 text-xs"
+                  />
+                  <span className="text-xs text-muted-foreground">-</span>
+                  <input
+                    type="number"
+                    placeholder="最高"
+                    value={priceMax}
+                    onChange={(e) => setPriceMax(e.target.value)}
+                    className="h-7 w-20 rounded border bg-background px-2 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <label className="text-xs text-muted-foreground">排序</label>
+                  <Select value={sortFields} onValueChange={setSortFields}>
+                    <SelectTrigger className="h-7 w-32">
+                      <SelectValue placeholder="默认" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">默认</SelectItem>
+                      <SelectItem value="price:asc">价格从低到高</SelectItem>
+                      <SelectItem value="price:desc">价格从高到低</SelectItem>
+                      <SelectItem value="sale_amount:desc">销量优先</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
