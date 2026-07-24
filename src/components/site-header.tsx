@@ -4,6 +4,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 
 const titleMap: Record<string, string> = {
   "/dashboard": "仪表盘",
+  "/quick-create": "快速创建",
+  "/tasks": "任务列表",
 }
 
 export function SiteHeader() {

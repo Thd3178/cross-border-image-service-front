@@ -1,5 +1,6 @@
 "use client"
 
+import { Link } from "react-router-dom"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,10 +37,10 @@ export function NavDocuments({
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a href={item.url}>
+              <Link to={item.url}>
                 {item.icon}
                 <span>{item.name}</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
