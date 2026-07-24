@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Link } from "react-router-dom"
 
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
@@ -20,7 +21,8 @@ import {
   RiSettingsLine,
   RiQuestionLine,
   RiSearchLine,
-  RiCommandLine,
+  RiAddCircleLine,
+  RiImageEditLine,
   RiUploadCloudLine,
 } from "@remixicon/react"
 import { useAuth } from "@/lib/auth-context"
@@ -33,13 +35,18 @@ const data = {
       icon: <RiDashboardLine />,
     },
     {
-      title: "图片上传",
-      url: "/dashboard",
+      title: "快速创建",
+      url: "/quick-create",
+      icon: <RiAddCircleLine />,
+    },
+    {
+      title: "背景上传",
+      url: "/backgrounds",
       icon: <RiUploadCloudLine />,
     },
     {
       title: "任务列表",
-      url: "/dashboard",
+      url: "/tasks",
       icon: <RiListUnordered />,
     },
   ],
@@ -92,12 +99,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="/dashboard">
-                <RiCommandLine className="size-5!" />
+              <Link to="/dashboard">
+                <RiImageEditLine className="size-5!" />
                 <span className="text-base font-semibold">
-                  跨境商品图片处理
+                  图片处理站
                 </span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

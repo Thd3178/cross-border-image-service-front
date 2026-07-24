@@ -2,6 +2,9 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import { useAuth } from "@/lib/auth-context"
 import { LoginPage } from "@/pages/LoginPage"
 import DashboardPage from "@/pages/DashboardPage"
+import QuickCreatePage from "@/pages/QuickCreatePage"
+import BackgroundsPage from "@/pages/BackgroundsPage"
+import TaskListPage from "@/pages/TaskListPage"
 import TaskDetailPage from "@/pages/TaskDetailPage"
 import ItemDetailPage from "@/pages/ItemDetailPage"
 import AppLayout from "@/components/app-layout"
@@ -56,6 +59,9 @@ export function App() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/quick-create" element={<QuickCreatePage />} />
+        <Route path="/backgrounds" element={<BackgroundsPage />} />
+        <Route path="/tasks" element={<TaskListPage />} />
         <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
         <Route path="/items/:itemId" element={<ItemDetailPage />} />
       </Route>
