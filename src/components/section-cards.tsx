@@ -28,10 +28,11 @@ interface SectionCardsProps {
 
 export function SectionCards({ stats }: SectionCardsProps) {
   return (
+    <>
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>图片处理总数</CardDescription>
+          <CardDescription>任务处理总数</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             {fmt(stats.completedTasks)}
           </CardTitle>
@@ -114,5 +115,94 @@ export function SectionCards({ stats }: SectionCardsProps) {
         </CardFooter>
       </Card>
     </div>
+
+    {/* ── Item-level stat cards (second row) ── */}
+    <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>分割完成图片总数</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {fmt(stats.segmentedCount)}
+          </CardTitle>
+          <CardAction>
+            <Badge variant="outline">
+              <RiArrowUpLine />
+              {fmt(stats.segmentedCount)}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            已成功去除背景{" "}
+            <RiArrowUpLine className="size-4" />
+          </div>
+          <div className="text-muted-foreground">已完成阿里云分割的商品图片</div>
+        </CardFooter>
+      </Card>
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>质检成功图片总数</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {fmt(stats.qaPassedCount)}
+          </CardTitle>
+          <CardAction>
+            <Badge variant="outline">
+              <RiArrowUpLine />
+              {fmt(stats.qaPassedCount)}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            通过质检{" "}
+            <RiArrowUpLine className="size-4" />
+          </div>
+          <div className="text-muted-foreground">豆包检验合规，无需额外处理</div>
+        </CardFooter>
+      </Card>
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>质检失败图片总数</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {fmt(stats.qaFailedCount)}
+          </CardTitle>
+          <CardAction>
+            <Badge variant="outline">
+              <RiArrowDownLine />
+              {fmt(stats.qaFailedCount)}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            存在违规{" "}
+            <RiArrowDownLine className="size-4" />
+          </div>
+          <div className="text-muted-foreground">包含严重违规，需人工介入处理</div>
+        </CardFooter>
+      </Card>
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>处理完成图片总数</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {fmt(stats.processedCount)}
+          </CardTitle>
+          <CardAction>
+            <Badge variant="outline">
+              <RiArrowUpLine />
+              {fmt(stats.processedCount)}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            已完成合成{" "}
+            <RiArrowUpLine className="size-4" />
+          </div>
+          <div className="text-muted-foreground">已合成背景并输出最终图片</div>
+        </CardFooter>
+      </Card>
+    </div>
+    </>
   )
 }

@@ -18,6 +18,8 @@ export type ItemStatus =
   | "SEGMENTED"
   | "ANALYZING"
   | "ANALYZED"
+  | "INPAINTING"
+  | "INPAINTED"
   | "COMPOSITING"
   | "COMPLETED"
   | "FAILED"
@@ -102,11 +104,37 @@ export interface LoginResult {
   nickname?: string
 }
 
+export interface CostTrendPoint {
+  date: string
+  doubaoTokens: number
+  aliyunCalls: number
+  otherTokens: number
+}
+
+export interface CostDailyPoint {
+  date: string
+  promptTokens: number
+  completionTokens: number
+  segmentCalls: number
+  costYuan: number
+}
+
 export interface DashboardStats {
   completedTasks: number
   totalTasks: number
   totalExpense: number
   backgroundCount: number
+  segmentedCount: number
+  qaFailedCount: number
+  qaPassedCount: number
+  processedCount: number
+  costTrends?: CostTrendPoint[]
+  /** 7-day cost aggregation (index 0 = 6 days ago, index 6 = today) */
+  last7dPromptTokens?: number[]
+  last7dCompletionTokens?: number[]
+  last7dSegmentCalls?: number[]
+  last7dCostYuan?: number[]
+  last7dDates?: string[]
 }
 
 export interface PageResult<T> {
@@ -176,12 +204,29 @@ export const authApi = {
 
 export const imageApi = {
   /** Upload image & create task */
-  upload: (file: File, backgroundId?: number) => {
+  upload: (
+    file: File,
+    options?: {
+      backgroundId?: number
+      keyword?: string
+      priceMin?: number
+      priceMax?: number
+      sortFields?: string
+      category?: string
+      tags?: string
+    }
+  ) => {
     const fd = new FormData()
     fd.append("file", file)
-    if (backgroundId !== undefined) {
-      fd.append("backgroundId", String(backgroundId))
+    if (options?.backgroundId !== undefined) {
+      fd.append("backgroundId", String(options.backgroundId))
     }
+    if (options?.keyword) fd.append("keyword", options.keyword)
+    if (options?.priceMin !== undefined) fd.append("priceMin", String(options.priceMin))
+    if (options?.priceMax !== undefined) fd.append("priceMax", String(options.priceMax))
+    if (options?.sortFields) fd.append("sortFields", options.sortFields)
+    if (options?.category) fd.append("category", options.category)
+    if (options?.tags) fd.append("tags", options.tags)
     return api.post<ApiResponse<{ taskId: number; status: string; message: string }>>("/image/upload", fd, {
       headers: { "Content-Type": "multipart/form-data" },
       timeout: 120000,
@@ -232,6 +277,52 @@ export const backgroundApi = {
 
   detail: (id: number) =>
     api.get<ApiResponse<BackgroundImage>>(`/backgrounds/${id}`),
+
+  /** Upload a new background image */
+  upload: (
+    file: File,
+    options?: { name?: string; category?: string; colorHex?: string }
+  ) => {
+    const fd = new FormData()
+    fd.append("file", file)
+    if (options?.name) fd.append("name", options.name)
+    if (options?.category) fd.append("category", options.category)
+    if (options?.colorHex) fd.append("colorHex", options.colorHex)
+    return api.post<ApiResponse<BackgroundImage>>("/backgrounds/upload", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 120000,
+    })
+  },
+}
+
+// ─── Cost API ───
+
+export const costApi = {
+  /** Current user total cost */
+  total: () =>
+    api.get<ApiResponse<{ totalCostYuan: number }>>("/cost/me/total"),
+
+  /** Current user today's cost */
+  today: () =>
+    api.get<ApiResponse<{ costYuan: number }>>("/cost/me/today"),
+
+  /** Daily cost breakdown for recent N days */
+  daily: (days = 7) =>
+    api.get<ApiResponse<CostDailyPoint[]>>("/cost/me/daily", {
+      params: { days },
+    }),
+
+  /** Cost detail for a specific task */
+  taskCost: (taskId: number) =>
+    api.get<ApiResponse<{
+      taskId: number
+      promptTokens: number
+      completionTokens: number
+      segmentCalls: number
+      segmentCostYuan: number
+      doubaoCostYuan: number
+      totalCostYuan: number
+    }>>(`/cost/me/task/${taskId}`),
 }
 
 export default api
