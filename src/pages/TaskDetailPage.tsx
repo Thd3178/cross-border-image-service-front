@@ -96,6 +96,8 @@ const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
   SEGMENTED: "已分割",
   ANALYZING: "质检中",
   ANALYZED: "已质检",
+  INPAINTING: "修复中",
+  INPAINTED: "已修复",
   COMPOSITING: "合成中",
   COMPLETED: "已完成",
   FAILED: "失败",
@@ -109,6 +111,8 @@ const ITEM_STATUS_STYLE: Record<ItemStatus, string> = {
   SEGMENTED: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   ANALYZING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   ANALYZED: "bg-teal-500/10 text-teal-500 border-teal-500/20",
+  INPAINTING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  INPAINTED: "bg-teal-500/10 text-teal-500 border-teal-500/20",
   COMPOSITING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   COMPLETED: "bg-green-500/10 text-green-500 border-green-500/20",
   FAILED: "bg-red-500/10 text-red-500 border-red-500/20",
@@ -339,6 +343,15 @@ export default function TaskDetailPage() {
     }
   }, [task?.status, fetchTask])
 
+  // ── Derived state ──
+
+  const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "USER_SELECTING"
+  const viewDetailMode =
+    task?.status === "PROCESSING" || task?.status === "COMPLETED"
+  const showItems =
+    items.length > 0 && task && ALLOW_ITEMS_STATUSES.has(task.status)
+  const allSelected = items.length > 0 && selectedIds.size === items.length
+
   // ── Actions ──
 
   const handleToggleItem = useCallback((itemId: number) => {
@@ -371,6 +384,15 @@ export default function TaskDetailPage() {
     }
   }
 
+  const handleToggleSelectAll = useCallback(() => {
+    if (items.length === 0) return
+    if (allSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(items.map((i) => i.id)))
+    }
+  }, [allSelected, items])
+
   const handleRetry = async () => {
     try {
       await imageApi.retryTask(numericTaskId)
@@ -387,14 +409,6 @@ export default function TaskDetailPage() {
     },
     [navigate]
   )
-
-  // ── Derived state ──
-
-  const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "USER_SELECTING"
-  const viewDetailMode =
-    task?.status === "PROCESSING" || task?.status === "COMPLETED"
-  const showItems =
-    items.length > 0 && task && ALLOW_ITEMS_STATUSES.has(task.status)
 
   // ── Render ──
 
@@ -477,12 +491,21 @@ export default function TaskDetailPage() {
 
         <div className="flex items-center gap-2">
           {selectingMode && (
-            <Button
-              onClick={handleSelectItems}
-              disabled={submitting || selectedIds.size === 0}
-            >
-              {submitting ? "提交中..." : "开始处理选中商品"}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={handleToggleSelectAll}
+                disabled={submitting}
+              >
+                {allSelected ? "取消全选" : "一键全选"}
+              </Button>
+              <Button
+                onClick={handleSelectItems}
+                disabled={submitting || selectedIds.size === 0}
+              >
+                {submitting ? "提交中..." : "开始处理选中商品"}
+              </Button>
+            </>
           )}
           {task.status === "FAILED" && (
             <Button variant="outline" onClick={handleRetry}>

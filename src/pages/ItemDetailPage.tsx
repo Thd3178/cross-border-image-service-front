@@ -15,6 +15,7 @@ const POLL_MS = 5000
 const PROGRESS_STATUSES: ReadonlySet<ItemStatus> = new Set([
   "SEGMENTING",
   "ANALYZING",
+  "INPAINTING",
   "COMPOSITING",
 ])
 
@@ -25,22 +26,24 @@ const STATUS_LABEL: Record<ItemStatus, string> = {
   SEGMENTED: "已分割",
   ANALYZING: "质检中",
   ANALYZED: "已质检",
+  INPAINTING: "修复中",
+  INPAINTED: "已修复",
   COMPOSITING: "合成中",
   COMPLETED: "已完成",
   FAILED: "失败",
   CANCELLED: "已取消",
 }
 
-type Verdict = "pass" | "fail" | "needs_crop"
+type Verdict = "pass" | "fail" | "needs_inpaint"
 
 function isVerdict(v: string): v is Verdict {
-  return v === "pass" || v === "fail" || v === "needs_crop"
+  return v === "pass" || v === "fail" || v === "needs_inpaint"
 }
 
 const VERDICT_LABEL: Record<Verdict, string> = {
   pass: "通过",
   fail: "不通过",
-  needs_crop: "需要裁剪",
+  needs_inpaint: "需要修复",
 }
 
 // ─── Page Component ───
@@ -103,7 +106,9 @@ export default function ItemDetailPage() {
 
   const isProgressing = PROGRESS_STATUSES.has(item.status)
   const showQuality =
-    item.status === "ANALYZED" || item.status === "COMPLETED"
+    item.status === "ANALYZED" ||
+    item.status === "INPAINTED" ||
+    item.status === "COMPLETED"
 
   return (
     <div className="container mx-auto p-6">
@@ -310,11 +315,11 @@ function VerdictBadge({ verdict }: { verdict: Verdict }) {
       className: "",
       icon: "✗",
     },
-    needs_crop: {
+    needs_inpaint: {
       variant: "outline",
       className:
-        "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
-      icon: "⚠",
+        "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-400",
+      icon: "🩹",
     },
   }
 
