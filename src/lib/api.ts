@@ -21,9 +21,17 @@ export type ItemStatus =
   | "INPAINTING"
   | "INPAINTED"
   | "COMPOSITING"
+  | "QWEN_EDITING"
   | "COMPLETED"
   | "FAILED"
   | "CANCELLED"
+
+/**
+ * 商品处理模式：
+ * - PIPELINE: 原流程（阿里分割→豆包质检→Inpaint→背景合成）
+ * - QWEN_TAKEOVER: Qwen 视觉接管（直接发原图给 Qwen-image-2.0 出主图）
+ */
+export type ProcessingMode = "PIPELINE" | "QWEN_TAKEOVER"
 
 export interface User {
   id: number
@@ -73,6 +81,10 @@ export interface TaskItem {
   status: ItemStatus
   errorMsg?: string
   userSelected?: boolean
+  /** 处理模式：PIPELINE | QWEN_TAKEOVER。新 item 默认 PIPELINE。 */
+  processingMode: ProcessingMode
+  /** Qwen 视觉接管成本（元），仅 QWEN_TAKEOVER 模式产生 */
+  qwenCostYuan?: number
   createdAt: string
 }
 
@@ -116,6 +128,8 @@ export interface CostDailyPoint {
   promptTokens: number
   completionTokens: number
   segmentCalls: number
+  /** Qwen 视觉接管成本（元）。可选：旧数据无此字段 */
+  qwenCostYuan?: number
   costYuan: number
 }
 
@@ -128,6 +142,8 @@ export interface DashboardStats {
   qaFailedCount: number
   qaPassedCount: number
   processedCount: number
+  /** Qwen 视觉接管已出图商品数 */
+  qwenProcessedCount: number
   costTrends?: CostTrendPoint[]
   /** 7-day cost aggregation (index 0 = 6 days ago, index 6 = today) */
   last7dPromptTokens?: number[]
@@ -257,6 +273,13 @@ export const imageApi = {
   /** Single item detail */
   itemDetail: (itemId: number) =>
     api.get<ApiResponse<TaskItem>>(`/image/item/${itemId}`),
+
+  /** Update per-item processing mode (Qwen takeover vs original pipeline) */
+  updateItemMode: (itemId: number, mode: ProcessingMode) =>
+    api.patch<ApiResponse<{ processingMode: ProcessingMode }>>(
+      `/image/item/${itemId}/mode`,
+      { processingMode: mode }
+    ),
 
   /** Retry failed task */
   retryTask: (taskId: number) =>

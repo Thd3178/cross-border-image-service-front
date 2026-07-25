@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
       {/* ── Stat Cards (bottom) ── */}
       <SectionCards
-        stats={stats ?? { completedTasks: 0, totalTasks: 0, totalExpense: 0, backgroundCount: 0, segmentedCount: 0, qaFailedCount: 0, qaPassedCount: 0, processedCount: 0 }}
+        stats={stats ?? { completedTasks: 0, totalTasks: 0, totalExpense: 0, backgroundCount: 0, segmentedCount: 0, qaFailedCount: 0, qaPassedCount: 0, processedCount: 0, qwenProcessedCount: 0 }}
       />
     </div>
   )

@@ -203,6 +203,31 @@ export function SectionCards({ stats }: SectionCardsProps) {
         </CardFooter>
       </Card>
     </div>
+
+    {/* ── Qwen takeover card (third row) ── */}
+    <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>Qwen 接管图片总数</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {fmt(stats.qwenProcessedCount)}
+          </CardTitle>
+          <CardAction>
+            <Badge variant="outline">
+              <RiArrowUpLine />
+              {fmt(stats.qwenProcessedCount)}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            视觉接管{" "}
+            <RiArrowUpLine className="size-4" />
+          </div>
+          <div className="text-muted-foreground">跳过分割/质检/合成，由 Qwen-image-2.0 直接出图</div>
+        </CardFooter>
+      </Card>
+    </div>
     </>
   )
 }

@@ -99,6 +99,7 @@ const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
   INPAINTING: "修复中",
   INPAINTED: "已修复",
   COMPOSITING: "合成中",
+  QWEN_EDITING: "Qwen编辑中",
   COMPLETED: "已完成",
   FAILED: "失败",
   CANCELLED: "已取消",
@@ -114,6 +115,7 @@ const ITEM_STATUS_STYLE: Record<ItemStatus, string> = {
   INPAINTING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   INPAINTED: "bg-teal-500/10 text-teal-500 border-teal-500/20",
   COMPOSITING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  QWEN_EDITING: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
   COMPLETED: "bg-green-500/10 text-green-500 border-green-500/20",
   FAILED: "bg-red-500/10 text-red-500 border-red-500/20",
   CANCELLED: "bg-gray-500/10 text-gray-500 border-gray-500/20",
@@ -247,6 +249,19 @@ function ProductCard({
           <p className="text-sm font-semibold text-amber-600">
             ¥{item.productPrice?.toFixed(2) ?? "0.00"}
           </p>
+
+          {/* 处理方式标签 (新增)：视觉接管=indigo / 原流程=muted */}
+          <Badge
+            variant="outline"
+            className={cn(
+              "self-start",
+              item.processingMode === "QWEN_TAKEOVER"
+                ? "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {item.processingMode === "QWEN_TAKEOVER" ? "视觉接管" : "原流程"}
+          </Badge>
 
           {/* View detail button */}
           {viewDetailMode && (

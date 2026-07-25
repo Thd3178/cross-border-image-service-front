@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { imageApi, type ItemStatus, type TaskItem } from "@/lib/api"
+import { imageApi, type ItemStatus, type ProcessingMode, type TaskItem } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { RiArrowGoBackLine } from "@remixicon/react"
@@ -17,6 +18,7 @@ const PROGRESS_STATUSES: ReadonlySet<ItemStatus> = new Set([
   "ANALYZING",
   "INPAINTING",
   "COMPOSITING",
+  "QWEN_EDITING",
 ])
 
 const STATUS_LABEL: Record<ItemStatus, string> = {
@@ -29,6 +31,7 @@ const STATUS_LABEL: Record<ItemStatus, string> = {
   INPAINTING: "修复中",
   INPAINTED: "已修复",
   COMPOSITING: "合成中",
+  QWEN_EDITING: "Qwen编辑中",
   COMPLETED: "已完成",
   FAILED: "失败",
   CANCELLED: "已取消",
@@ -54,6 +57,7 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState<TaskItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [modeSaving, setModeSaving] = useState(false)
 
   // Initial load
   useEffect(() => {
@@ -105,10 +109,38 @@ export default function ItemDetailPage() {
   if (!item) return <NotFoundState />
 
   const isProgressing = PROGRESS_STATUSES.has(item.status)
+  // 仅 PENDING / SELECTED 允许切换处理模式；处理中或已完成一律禁用
+  // 后端 ImageTaskService.updateItemProcessingMode 有同样的状态守卫，
+  // 这里 UI 提前禁用避免无效请求 + 给清晰的提示
+  const canToggleMode = item.status === "PENDING" || item.status === "SELECTED"
+
+  // 视觉接管模式不走分割/质检/合成，所以左侧只显示原图 + Qwen 编辑结果，
+  // 右侧也不显示质检结果卡片
+  const isQwenTakeover = item.processingMode === "QWEN_TAKEOVER"
   const showQuality =
-    item.status === "ANALYZED" ||
-    item.status === "INPAINTED" ||
-    item.status === "COMPLETED"
+    !isQwenTakeover &&
+    (item.status === "ANALYZED" ||
+      item.status === "INPAINTED" ||
+      item.status === "COMPLETED")
+
+  const handleModeChange = async (newMode: ProcessingMode) => {
+    if (!canToggleMode || newMode === item.processingMode) return
+    const prev = item.processingMode
+    setModeSaving(true)
+    // 乐观更新：先在前端切到新模式，失败回滚
+    setItem({ ...item, processingMode: newMode })
+    try {
+      await imageApi.updateItemMode(item.id, newMode)
+      toast.success(
+        newMode === "QWEN_TAKEOVER" ? "已切到视觉接管" : "已切到原流程"
+      )
+    } catch (err) {
+      setItem({ ...item, processingMode: prev })
+      toast.error(err instanceof Error ? err.message : "切换失败")
+    } finally {
+      setModeSaving(false)
+    }
+  }
 
   return (
     <div className="container mx-auto p-6">
@@ -128,11 +160,24 @@ export default function ItemDetailPage() {
         {/* ── Left: Image Pipeline ── */}
         <div className="flex flex-col gap-6">
           <ImageCard title="原始图片" url={item.productImgUrl} />
-          {item.segmentedImgUrl && (
-            <ImageCard title="分割结果" url={item.segmentedImgUrl} />
-          )}
-          {item.finalImgUrl && (
-            <ImageCard title="最终合成" url={item.finalImgUrl} />
+          {isQwenTakeover ? (
+            <>
+              {item.finalImgUrl && (
+                <ImageCard title="Qwen 编辑结果" url={item.finalImgUrl} />
+              )}
+              {item.status === "QWEN_EDITING" && (
+                <ProcessingPlaceholder label="Qwen 正在编辑中..." />
+              )}
+            </>
+          ) : (
+            <>
+              {item.segmentedImgUrl && (
+                <ImageCard title="分割结果" url={item.segmentedImgUrl} />
+              )}
+              {item.finalImgUrl && (
+                <ImageCard title="最终合成" url={item.finalImgUrl} />
+              )}
+            </>
           )}
         </div>
 
@@ -146,6 +191,16 @@ export default function ItemDetailPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
                 <StatusBadge status={item.status} />
+                <Badge
+                  variant="outline"
+                  className={
+                    isQwenTakeover
+                      ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400"
+                      : "bg-muted text-muted-foreground"
+                  }
+                >
+                  {isQwenTakeover ? "视觉接管" : "原流程"}
+                </Badge>
                 {isProgressing && (
                   <span className="animate-pulse text-sm text-muted-foreground">
                     处理中...
@@ -156,6 +211,51 @@ export default function ItemDetailPage() {
                 <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                   {item.errorMsg}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Processing mode card (新增) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>处理模式</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ToggleGroup
+                type="single"
+                value={item.processingMode}
+                onValueChange={(v) => {
+                  if (v === "PIPELINE" || v === "QWEN_TAKEOVER") {
+                    void handleModeChange(v)
+                  }
+                }}
+                disabled={!canToggleMode || modeSaving}
+                className="w-full"
+              >
+                <ToggleGroupItem
+                  value="PIPELINE"
+                  className="flex-1"
+                  aria-label="原流程"
+                >
+                  原流程
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="QWEN_TAKEOVER"
+                  className="flex-1"
+                  aria-label="视觉接管"
+                >
+                  视觉接管
+                </ToggleGroupItem>
+              </ToggleGroup>
+              {!canToggleMode && (
+                <p className="text-xs text-muted-foreground">
+                  处理中或已完成，无法切换处理模式
+                </p>
+              )}
+              {isQwenTakeover && (
+                <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                  视觉接管：跳过分割/质检/合成，由 Qwen 直接编辑出图
+                </p>
               )}
             </CardContent>
           </Card>
@@ -200,6 +300,8 @@ export default function ItemDetailPage() {
                     <VerdictBadge verdict={item.overallVerdict} />
                   </div>
                 )}
+                {/* 视觉接管模式不经过质检，overall_verdict 写死 'qwen_takeover'，
+                    isVerdict() 不匹配，自然不显示 VerdictBadge，无需特判 */}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <QualityCheckItem
@@ -348,6 +450,24 @@ function QualityCheckItem({
         <p className="text-sm font-medium">{passed ? "是" : "否"}</p>
       </div>
     </div>
+  )
+}
+
+function ProcessingPlaceholder({ label }: { label: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex aspect-square items-center justify-center rounded-xl bg-muted text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
+            正在处理...
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
