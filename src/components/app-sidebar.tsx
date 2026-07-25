@@ -64,14 +64,9 @@ const data = {
   ],
   documents: [
     {
-      name: "1688 搜索结果",
-      url: "/dashboard",
-      icon: <RiSearchLine />,
-    },
-    {
-      name: "处理结果",
-      url: "/dashboard",
-      icon: <RiImageLine />,
+      name: "使用指南",
+      url: "/guide",
+      icon: <RiQuestionLine />,
     },
   ],
 }

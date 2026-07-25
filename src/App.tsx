@@ -7,6 +7,7 @@ import BackgroundsPage from "@/pages/BackgroundsPage"
 import TaskListPage from "@/pages/TaskListPage"
 import TaskDetailPage from "@/pages/TaskDetailPage"
 import ItemDetailPage from "@/pages/ItemDetailPage"
+import GuidePage from "@/pages/GuidePage"
 import AppLayout from "@/components/app-layout"
 import type { ReactNode } from "react"
 
@@ -64,6 +65,7 @@ export function App() {
         <Route path="/tasks" element={<TaskListPage />} />
         <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
         <Route path="/items/:itemId" element={<ItemDetailPage />} />
+        <Route path="/guide" element={<GuidePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
