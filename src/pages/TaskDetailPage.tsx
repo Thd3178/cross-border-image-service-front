@@ -7,6 +7,7 @@ import {
   type Task,
   type TaskItem,
   type TaskStatus,
+  type ProcessingMode,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -294,6 +295,8 @@ export default function TaskDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [submitting, setSubmitting] = useState(false)
+  /** Qwen 视觉模型全权接管提交中，独立 loading state 防止与原流程按钮互锁 */
+  const [qwenSubmitting, setQwenSubmitting] = useState(false)
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -396,6 +399,53 @@ export default function TaskDetailPage() {
       toast.error(err instanceof Error ? err.message : "提交失败")
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  /**
+   * 把当前选中的商品标记为 QWEN_TAKEOVER 模式后提交处理。
+   * <ol>
+   *   <li>批量 PATCH /api/image/item/{itemId}/mode 把选中项切到 QWEN_TAKEOVER</li>
+   *   <li>调 selectItems 触发 processTask (后端按各 item 持久化的 processing_mode 分流)</li>
+   * </ol>
+   * 任何一项 PATCH 失败都终止本次提交, 不触发 selectItems, 避免半切换状态;
+   * 局部失败给用户看到失败清单。
+   */
+  const handleQwenTakeover = async () => {
+    if (selectedIds.size === 0) {
+      toast.warning("请至少选择一个商品")
+      return
+    }
+
+    setQwenSubmitting(true)
+    try {
+      const ids = Array.from(selectedIds)
+      const mode: ProcessingMode = "QWEN_TAKEOVER"
+
+      // 1. 批量切换模式 — 用 Promise.allSettled 记录失败, 任一失败就终止提交流程
+      const results = await Promise.allSettled(
+        ids.map((id) => imageApi.updateItemMode(id, mode))
+      )
+      const failedIds = ids.filter((_, i) => results[i].status === "rejected")
+      if (failedIds.length > 0) {
+        toast.error(`有 ${failedIds.length} 个商品切换模式失败, 已终止提交`)
+        return
+      }
+
+      // 2. 调 selectItems 触发处理 (后端 processTask 会按 item.processingMode 分流)
+      await imageApi.selectItems(numericTaskId, ids)
+      toast.success(`已提交 ${ids.length} 个商品给 Qwen 视觉模型全权接管`)
+      // 立即在 UI 上更新 mode 显示, 不等下次 fetchTask
+      setItems((prev) =>
+        prev.map((it) =>
+          ids.includes(it.id) ? { ...it, processingMode: "QWEN_TAKEOVER" } : it
+        )
+      )
+      await fetchTask()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Qwen 接管提交失败")
+    } finally {
+      setQwenSubmitting(false)
     }
   }
 
@@ -510,15 +560,22 @@ export default function TaskDetailPage() {
               <Button
                 variant="outline"
                 onClick={handleToggleSelectAll}
-                disabled={submitting}
+                disabled={submitting || qwenSubmitting}
               >
                 {allSelected ? "取消全选" : "一键全选"}
               </Button>
               <Button
                 onClick={handleSelectItems}
-                disabled={submitting || selectedIds.size === 0}
+                disabled={submitting || qwenSubmitting || selectedIds.size === 0}
               >
                 {submitting ? "提交中..." : "开始处理选中商品"}
+              </Button>
+              <Button
+                onClick={handleQwenTakeover}
+                disabled={submitting || qwenSubmitting || selectedIds.size === 0}
+                className="border border-indigo-300 bg-indigo-500 text-white hover:bg-indigo-600 hover:text-white dark:border-indigo-500"
+              >
+                {qwenSubmitting ? "提交中..." : "Qwen 视觉模型全权接管"}
               </Button>
             </>
           )}
