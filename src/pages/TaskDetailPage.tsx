@@ -51,6 +51,11 @@ const STATUS_CONFIG: Record<
     className:
       "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
   },
+  PARTIAL_COMPLETED: {
+    label: "部分完成",
+    className:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  },
   COMPLETED: {
     label: "已完成",
     className:
@@ -84,6 +89,7 @@ const ALLOW_ITEMS_STATUSES: ReadonlySet<TaskStatus> = new Set([
   "SEARCH_COMPLETED",
   "USER_SELECTING",
   "PROCESSING",
+  "PARTIAL_COMPLETED",
   "COMPLETED",
   "FAILED",
 ])
@@ -120,6 +126,212 @@ const ITEM_STATUS_STYLE: Record<ItemStatus, string> = {
   COMPLETED: "bg-green-500/10 text-green-500 border-green-500/20",
   FAILED: "bg-red-500/10 text-red-500 border-red-500/20",
   CANCELLED: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+}
+
+// ─── Status stamp palette (右上角印章样式) ───
+// 每个状态对应的印章颜色：边框 / 文字 / 背景（透明带轻微淡色，类似真章盖在纸上）
+type StampPalette = {
+  borderColor: string
+  textColor: string
+  bgColor: string
+  className: string
+}
+
+const ITEM_STAMP_STYLE: Record<ItemStatus, StampPalette> = {
+  PENDING: {
+    borderColor: "#94a3b8",
+    textColor: "#94a3b8",
+    bgColor: "rgba(148, 163, 184, 0.08)",
+    className: "",
+  },
+  SELECTED: {
+    borderColor: "#3b82f6",
+    textColor: "#1d4ed8",
+    bgColor: "rgba(59, 130, 246, 0.10)",
+    className: "",
+  },
+  SEGMENTING: {
+    borderColor: "#a855f7",
+    textColor: "#7e22ce",
+    bgColor: "rgba(168, 85, 247, 0.12)",
+    className: "",
+  },
+  SEGMENTED: {
+    borderColor: "#06b6d4",
+    textColor: "#0e7490",
+    bgColor: "rgba(6, 182, 212, 0.10)",
+    className: "",
+  },
+  ANALYZING: {
+    borderColor: "#a855f7",
+    textColor: "#7e22ce",
+    bgColor: "rgba(168, 85, 247, 0.12)",
+    className: "",
+  },
+  ANALYZED: {
+    borderColor: "#14b8a6",
+    textColor: "#0f766e",
+    bgColor: "rgba(20, 184, 166, 0.10)",
+    className: "",
+  },
+  INPAINTING: {
+    borderColor: "#a855f7",
+    textColor: "#7e22ce",
+    bgColor: "rgba(168, 85, 247, 0.12)",
+    className: "",
+  },
+  INPAINTED: {
+    borderColor: "#14b8a6",
+    textColor: "#0f766e",
+    bgColor: "rgba(20, 184, 166, 0.10)",
+    className: "",
+  },
+  COMPOSITING: {
+    borderColor: "#a855f7",
+    textColor: "#7e22ce",
+    bgColor: "rgba(168, 85, 247, 0.12)",
+    className: "",
+  },
+  QWEN_EDITING: {
+    borderColor: "#6366f1",
+    textColor: "#4338ca",
+    bgColor: "rgba(99, 102, 241, 0.12)",
+    className: "",
+  },
+  COMPLETED: {
+    borderColor: "#dc2626",
+    textColor: "#b91c1c",
+    bgColor: "rgba(220, 38, 38, 0.10)",
+    // COMPLETED 用更醒目的红色印章（传统公章朱红）
+    className: "",
+  },
+  FAILED: {
+    borderColor: "#7f1d1d",
+    textColor: "#7f1d1d",
+    bgColor: "rgba(127, 29, 29, 0.10)",
+    className: "",
+  },
+  CANCELLED: {
+    borderColor: "#475569",
+    textColor: "#475569",
+    bgColor: "rgba(71, 85, 105, 0.10)",
+    className: "",
+  },
+}
+
+// ─── Pipeline step config (流水线步骤图) ───
+// PIPELINE 流程：PENDING → 分割 → 质检 → 修复 → 合成 → COMPLETED
+// QWEN_TAKEOVER 流程：PENDING → Qwen 编辑 → COMPLETED
+type PipelineStep = {
+  key: number
+  label: string
+  /** 触发该步的 item.status 集合（处于这步的 item 算"进行中"） */
+  liveStatuses: ItemStatus[]
+  /** 该步已完成（流转到下一步）的 item.status 集合 */
+  doneStatuses: ItemStatus[]
+}
+
+const PIPELINE_STEPS: PipelineStep[] = [
+  {
+    key: 0,
+    label: "待处理",
+    liveStatuses: ["PENDING", "SELECTED"],
+    doneStatuses: [],
+  },
+  {
+    key: 1,
+    label: "分割背景",
+    liveStatuses: ["SEGMENTING"],
+    doneStatuses: ["SEGMENTED"],
+  },
+  {
+    key: 2,
+    label: "豆包质检",
+    liveStatuses: ["ANALYZING"],
+    doneStatuses: ["ANALYZED", "INPAINTING", "INPAINTED"],
+  },
+  {
+    key: 3,
+    label: "修复",
+    liveStatuses: ["INPAINTING"],
+    doneStatuses: ["INPAINTED"],
+  },
+  {
+    key: 4,
+    label: "合成主图",
+    liveStatuses: ["COMPOSITING"],
+    doneStatuses: [],
+  },
+  {
+    key: 5,
+    label: "部分完成",
+    liveStatuses: [],
+    doneStatuses: [],
+    // PARTIAL_COMPLETED 状态由 task.status 决定，不在 item.status 里；
+    // PipelineDiagram 里通过 task.status===PARTIAL_COMPLETED 触发该 node 高亮，不靠 item 累计
+  },
+  {
+    key: 6,
+    label: "已完成",
+    liveStatuses: [],
+    doneStatuses: ["COMPLETED"],
+  },
+]
+
+const QWEN_STEPS: PipelineStep[] = [
+  {
+    key: 0,
+    label: "待处理",
+    liveStatuses: ["PENDING", "SELECTED"],
+    doneStatuses: [],
+  },
+  {
+    key: 1,
+    label: "Qwen 编辑",
+    liveStatuses: ["QWEN_EDITING"],
+    doneStatuses: [],
+  },
+  {
+    key: 2,
+    label: "部分完成",
+    liveStatuses: [],
+    doneStatuses: [],
+  },
+  {
+    key: 3,
+    label: "已完成",
+    liveStatuses: [],
+    doneStatuses: ["COMPLETED"],
+  },
+]
+
+/** 给定一组 item，返回每个 pipeline step 的统计 (inProgressCount / doneCount) */
+function computeStepStats(
+  items: TaskItem[],
+  steps: PipelineStep[],
+): Array<{ step: PipelineStep; inProgress: number; done: number }> {
+  return steps.map((step) => {
+    let inProgress = 0
+    let done = 0
+    for (const it of items) {
+      if (step.liveStatuses.includes(it.status)) inProgress++
+      if (step.doneStatuses.includes(it.status)) done++
+    }
+    return { step, inProgress, done }
+  })
+}
+
+/** 决定当前"激活"的 step index：第一个仍有 inProgress 的 step；若全无 inProgress，最后非零 done 数的 step */
+function pickActiveStep(
+  stats: Array<{ step: PipelineStep; inProgress: number; done: number }>,
+): number {
+  const liveIdx = stats.findIndex((s) => s.inProgress > 0)
+  if (liveIdx >= 0) return liveIdx
+  // 全部 inProgress=0 → 取最后一个 done 累计 > 0 或者第一步
+  for (let i = stats.length - 1; i >= 0; i--) {
+    if (stats[i].done > 0) return i
+  }
+  return 0
 }
 
 // ─── Image fallback ───
@@ -192,6 +404,333 @@ interface ProductCardProps {
   onViewDetail: (itemId: number) => void
 }
 
+// ─── Pipeline diagram component (流水线步骤图) ───
+interface PipelineDiagramProps {
+  items: TaskItem[]
+  task: Task | null
+}
+
+// ─── 单个 step 气泡 (PIPELINE / QWEN 分支共用) ───
+interface StepBubbleProps {
+  ordinal: number
+  label: string
+  inProgress: number
+  done: number
+  active: boolean
+  completed: boolean
+  accent?: "indigo" | "emerald" | "amber"
+}
+
+function StepBubble({ ordinal, label, inProgress, done, active, completed, accent = "indigo" }: StepBubbleProps) {
+  const activeBorder = accent === "indigo" ? "border-indigo-500 bg-indigo-500"
+    : accent === "amber" ? "border-amber-500 bg-amber-500"
+    : "border-emerald-500 bg-emerald-500"
+  const activeText = accent === "indigo" ? "text-indigo-500"
+    : accent === "amber" ? "text-amber-600"
+    : "text-emerald-600"
+  return (
+    <div className="flex flex-col items-center gap-1.5 min-w-0">
+      <div
+        className={
+          "flex size-9 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors " +
+          (completed
+            ? "border-emerald-500 bg-emerald-500 text-white"
+            : active
+              ? `${activeBorder} text-white animate-pulse`
+              : "border-muted-foreground/30 bg-background text-muted-foreground")
+        }
+      >
+        {completed ? (
+          <svg
+            className="size-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : (
+          ordinal
+        )}
+      </div>
+      <span
+        className={
+          "text-xs leading-tight " +
+          (active
+            ? `${activeText} font-medium`
+            : completed
+              ? "text-emerald-600 font-medium"
+              : "text-muted-foreground")
+        }
+      >
+        {label}
+      </span>
+      <span className="text-[10px] text-muted-foreground tabular-nums">
+        {inProgress > 0 && `进行 ${inProgress} · `}
+        {done > 0 ? `完成 ${done}` : "—"}
+      </span>
+    </div>
+  )
+}
+
+function PipelineDiagram({ items, task }: PipelineDiagramProps) {
+  if (items.length === 0) return null
+
+  const qwenItems = items.filter((it) => it.processingMode === "QWEN_TAKEOVER")
+  const pipelineItems = items.filter((it) => it.processingMode !== "QWEN_TAKEOVER")
+  const hasQwen = qwenItems.length > 0
+  const hasPipeline = pipelineItems.length > 0
+  const isMixed = hasQwen && hasPipeline
+  const mode = !hasQwen ? "PIPELINE" : !hasPipeline ? "QWEN" : "MIXED"
+
+  const isTerminal = task?.status === "COMPLETED" || task?.status === "FAILED"
+
+  // 模式标题
+  const modeLabel = mode === "QWEN"
+    ? "Qwen 视觉接管模式"
+    : mode === "MIXED"
+      ? "混合模式 (原流程 + Qwen 接管)"
+      : "原流程模式"
+  const stageLabel = task?.status === "PROCESSING"
+    ? " · 处理中"
+    : task?.status === "PARTIAL_COMPLETED"
+      ? " · 部分完成"
+      : task?.status === "COMPLETED"
+        ? " · 已完成"
+        : task?.status === "FAILED"
+          ? " · 失败"
+          : ""
+
+  // ─── 纯 PIPELINE / 纯 QWEN：单路渲染 ───
+  if (!isMixed) {
+    const steps = mode === "QWEN" ? QWEN_STEPS : PIPELINE_STEPS
+    const stats = computeStepStats(items, steps)
+    const activeIdx = pickActiveStep(stats)
+
+    // 终态色：COMPLETED 全绿; PARTIAL_COMPLETED 都琥珀; FAILED 都灰
+    const forceAllCompleted = task?.status === "COMPLETED"
+    const forceAllPartial = task?.status === "PARTIAL_COMPLETED"
+
+    return (
+      <div className="flex flex-col gap-2 rounded-xl border bg-card/50 p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">处理流水线</h3>
+          <span className="text-xs text-muted-foreground">
+            {modeLabel}{stageLabel}
+          </span>
+        </div>
+        <div className="flex items-center">
+          {steps.map((step, idx) => {
+            const s = stats[idx]
+            const isLast = idx === steps.length - 1
+            // 终态 override
+            const overrideCompleted = forceAllCompleted && isLast
+              ? true
+              : forceAllPartial && step.label === "部分完成"
+                ? true
+                : false
+            const allDone = s.done > 0 && s.inProgress === 0 && idx < activeIdx
+            const lastStepDoneAfterAll = isLast && s.done === items.length && items.length > 0
+            const completed = overrideCompleted || allDone || lastStepDoneAfterAll
+            const active = idx === activeIdx && s.inProgress > 0 && !overrideCompleted
+            const accent: "indigo" | "amber" = forceAllPartial && step.label === "部分完成" ? "amber" : "indigo"
+
+            return (
+              <div
+                key={step.key}
+                className="flex flex-1 items-center"
+                aria-label={`pipeline-step-${step.label}`}
+              >
+                <StepBubble
+                  ordinal={idx + 1}
+                  label={step.label}
+                  inProgress={s.inProgress}
+                  done={s.done}
+                  active={active}
+                  completed={completed}
+                  accent={accent}
+                />
+                {!isLast && (
+                  <div className="relative h-0.5 flex-1 mx-2 min-w-[20px]">
+                    <div className="absolute inset-0 bg-muted-foreground/20" />
+                    <div
+                      className={
+                        "absolute inset-y-0 left-0 transition-all " +
+                        (idx < activeIdx ? "bg-emerald-500 w-full"
+                          : activeIdx === idx && active ? "bg-indigo-500 w-1/2"
+                          : forceAllCompleted ? "bg-emerald-500 w-full" : "w-0")
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // ─── 混合模式：分支渲染 ───
+  // 上路: PIPELINE 5 步 (不含终态) - 分割/质检/修复/合成 - 用 pipelineItems 算 stats
+  // 下路: QWEN 1 步 - Qwen 编辑 - 用 qwenItems 算 stats
+  // 起点共享: 待处理 (用所有 items 的 PENDING/SELECTED)
+  // 汇合节点: 部分完成 → 已完成 (基于 task.status)
+  const pipelineBranchSteps = PIPELINE_STEPS.slice(1, 5) // 分割/质检/修复/合成 (4 步, key 1-4)
+  const qwenBranchSteps = QWEN_STEPS.slice(1, 2) // Qwen 编辑 (1 步, key 1)
+
+  const pipelineStats = computeStepStats(pipelineItems, pipelineBranchSteps)
+  const qwenStats = computeStepStats(qwenItems, qwenBranchSteps)
+  const pipelineActiveIdx = pickActiveStep(pipelineStats)
+  const qwenActiveIdx = pickActiveStep(qwenStats)
+
+  // 待处理统计 (共享起点)
+  const pendingInProgress = items.filter((it) => it.status === "PENDING" || it.status === "SELECTED").length
+  const pendingActive = pendingInProgress > 0 && task?.status === "PROCESSING"
+
+  // 汇合节点 state
+  const totalCompleted = items.filter((it) => it.status === "COMPLETED").length
+  const allDone = totalCompleted === items.length
+  const partialDone = totalCompleted > 0 && totalCompleted < items.length
+  const partialNodeActive = task?.status === "PARTIAL_COMPLETED"
+  const completedNodeCompleted = task?.status === "COMPLETED"
+  const completedNodeActive = allDone && !completedNodeCompleted
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border bg-card/50 p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">处理流水线 (分支模式)</h3>
+        <span className="text-xs text-muted-foreground">
+          {modeLabel}{stageLabel}
+        </span>
+      </div>
+      {/* Layout: [待处理] ──┬──上路 PIPELINE 4 步──┐──[部分完成]──[已完成]
+                     └──下路 Qwen 1 步 ──┘ */}
+      <div className="grid grid-cols-[auto_1fr_auto] items-stretch gap-0">
+        {/* col 1: 待处理 (跨上路+下路 两行) */}
+        <div className="flex flex-col items-center justify-center pr-3">
+          <StepBubble
+            ordinal={1}
+            label="待处理"
+            inProgress={pendingInProgress}
+            done={0}
+            active={pendingActive}
+            completed={pendingInProgress === 0 && task?.status !== "PROCESSING"}
+            accent="indigo"
+          />
+        </div>
+        {/* col 2: 上下两路 */}
+        <div className="flex flex-col gap-3 py-1">
+          {/* 上路: PIPELINE 4 步 */}
+          <div className="flex items-center">
+            {pipelineBranchSteps.map((step, idx) => {
+              const s = pipelineStats[idx]
+              const allDone = s.done > 0 && s.inProgress === 0 && idx < pipelineActiveIdx
+              const active = idx === pipelineActiveIdx && s.inProgress > 0
+              const completed = allDone
+              const isLast = idx === pipelineBranchSteps.length - 1
+              return (
+                <div
+                  key={`pa-${step.key}`}
+                  className="flex flex-1 items-center"
+                  aria-label={`pipeline-branch-${step.label}`}
+                >
+                  <StepBubble
+                    ordinal={idx + 2}
+                    label={step.label}
+                    inProgress={s.inProgress}
+                    done={s.done}
+                    active={active}
+                    completed={completed}
+                    accent="indigo"
+                  />
+                  {!isLast && (
+                    <div className="relative h-0.5 flex-1 mx-2 min-w-[16px]">
+                      <div className="absolute inset-0 bg-muted-foreground/20" />
+                      <div
+                        className={
+                          "absolute inset-y-0 left-0 transition-all " +
+                          (idx < pipelineActiveIdx ? "bg-emerald-500 w-full"
+                            : pipelineActiveIdx === idx && active ? "bg-indigo-500 w-1/2" : "w-0")
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {/* 下路: QWEN 1 步 */}
+          <div className="flex items-center">
+            {qwenBranchSteps.map((step, idx) => {
+              const s = qwenStats[idx]
+              const allDone = s.done > 0 && s.inProgress === 0 && idx < qwenActiveIdx
+              const active = idx === qwenActiveIdx && s.inProgress > 0
+              const completed = allDone
+              return (
+                <div
+                  key={`qa-${step.key}`}
+                  className="flex flex-1 items-center"
+                  aria-label={`qwen-branch-${step.label}`}
+                >
+                  <StepBubble
+                    ordinal={2}
+                    label={step.label}
+                    inProgress={s.inProgress}
+                    done={s.done}
+                    active={active}
+                    completed={completed}
+                    accent="indigo"
+                  />
+                </div>
+              )
+            })}
+            {/* 下路占位 (与上路 4 步对齐时长度的填补) */}
+            <div className="flex-1" />
+            <div className="flex-1" />
+            <div className="flex-1" />
+          </div>
+        </div>
+        {/* col 3: 汇合 - 部分完成 + 已完成 */}
+        <div className="flex items-center pl-3">
+          <div className="flex items-center">
+            <StepBubble
+              ordinal={0}
+              label="部分完成"
+              inProgress={0}
+              done={totalCompleted}
+              active={partialNodeActive || completedNodeActive}
+              completed={partialNodeActive || completedNodeCompleted}
+              accent="amber"
+            />
+            <div className="relative h-0.5 w-6 mx-2">
+              <div className="absolute inset-0 bg-muted-foreground/20" />
+              <div
+                className={
+                  "absolute inset-y-0 left-0 transition-all " +
+                  (partialNodeActive || completedNodeCompleted || completedNodeActive ? "bg-emerald-500 w-full" : "w-0")
+                }
+              />
+            </div>
+            <StepBubble
+              ordinal={0}
+              label="已完成"
+              inProgress={0}
+              done={totalCompleted}
+              active={false}
+              completed={completedNodeCompleted}
+              accent="emerald"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProductCard({
   item,
   selected,
@@ -217,29 +756,45 @@ function ProductCard({
         </div>
       )}
 
-      {/* Status badge (非选择模式下显示) */}
-      {!selectingMode && item.status !== "PENDING" && (
-        <Badge
-          variant="outline"
-          className={cn(
-            "absolute left-2 top-2 z-10",
-            ITEM_STATUS_STYLE[item.status] ?? ""
-          )}
-        >
-          {ITEM_STATUS_LABEL[item.status] ?? item.status}
-        </Badge>
-      )}
+      {/* Stamp disabled in selecting mode; show rotated seal on image top-right otherwise (lines below) */}
 
       <CardContent className="flex flex-col gap-0 p-0">
-        {/* Product image */}
+        {/* Product image — COMPLETED 且有 finalImgUrl 则显示处理结果，否则原图；右上角盖状态印章 */}
         <div className="relative aspect-square w-full overflow-hidden rounded-t-3xl bg-muted">
           <img
-            src={item.productImgUrl || FALLBACK_IMG}
+            src={item.status === "COMPLETED" && item.finalImgUrl ? item.finalImgUrl : (item.productImgUrl || FALLBACK_IMG)}
             alt={item.productTitle ?? "商品图片"}
             className="h-full w-full object-cover"
             loading="lazy"
             onError={imgErrorHandler}
           />
+
+          {/* 状态印章：非选择模式下，对 PENDING 以外的所有状态显示在图片右上角，旋转 -12deg, 双边框, 文字粗体 */}
+          {!selectingMode && (() => {
+            const status = item.status
+            if (status === "PENDING") return null
+            const label = ITEM_STATUS_LABEL[status] ?? status
+            const palette = ITEM_STAMP_STYLE[status] ?? ITEM_STAMP_STYLE.PENDING
+            return (
+              <div
+                className={cn(
+                  "pointer-events-none absolute right-3 top-3 z-10 select-none",
+                  "rotate-[-12deg] origin-top-right",
+                )}
+                aria-hidden
+              >
+                <div
+                  className={cn(
+                    "flex items-center justify-center rounded-md border-2 px-3 py-1.5 text-[13px] font-bold tracking-wider uppercase shadow-sm backdrop-blur-[1px]",
+                    palette.className,
+                  )}
+                  style={{ borderColor: palette.borderColor, color: palette.textColor, backgroundColor: palette.bgColor }}
+                >
+                  {label}
+                </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Info */}
@@ -346,9 +901,9 @@ export default function TaskDetailPage() {
     fetchTask()
   }, [fetchTask])
 
-  // Poll every 5s when searching
+  // Poll every 5s when searching or processing (so pipeline diagram stays live)
   useEffect(() => {
-    if (task?.status === "SEARCHING") {
+    if (task?.status === "SEARCHING" || task?.status === "PROCESSING") {
       pollRef.current = setInterval(() => {
         fetchTask()
       }, 5000)
@@ -363,7 +918,7 @@ export default function TaskDetailPage() {
 
   // ── Derived state ──
 
-  const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "USER_SELECTING"
+  const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "USER_SELECTING" || task?.status === "PARTIAL_COMPLETED"
   const viewDetailMode =
     task?.status === "PROCESSING" || task?.status === "COMPLETED"
   const showItems =
@@ -587,6 +1142,11 @@ export default function TaskDetailPage() {
           )}
         </div>
       </div>
+
+      {/* ─── Pipeline diagram (顶部流水线步骤图，PROCESSING / PARTIAL_COMPLETED / COMPLETED / FAILED 时显示) ─── */}
+      {task && (task.status === "PROCESSING" || task.status === "PARTIAL_COMPLETED" || task.status === "COMPLETED" || task.status === "FAILED") && items.length > 0 && (
+        <PipelineDiagram items={items} task={task} />
+      )}
 
       {/* ─── Items grid ─── */}
       {showItems && (

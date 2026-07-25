@@ -8,6 +8,7 @@ export type TaskStatus =
   | "SEARCH_COMPLETED"
   | "USER_SELECTING"
   | "PROCESSING"
+  | "PARTIAL_COMPLETED"
   | "COMPLETED"
   | "FAILED"
 
