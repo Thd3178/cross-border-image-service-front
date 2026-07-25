@@ -33,10 +33,10 @@ import { costApi } from "@/lib/api"
 
 // ─── Mock data: fallback when API unavailable ───
 
-function generateMockCostDaily(): CostDailyPoint[] {
+function generateMockCostDaily(days = 7): CostDailyPoint[] {
   const data: CostDailyPoint[] = []
   const now = new Date()
-  for (let i = 6; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now)
     d.setDate(d.getDate() - i)
     const dateStr = d.toISOString().slice(0, 10)
@@ -46,12 +46,11 @@ function generateMockCostDaily(): CostDailyPoint[] {
       completionTokens: Math.floor(2000 + Math.random() * 15000),
       segmentCalls: Math.floor(30 + Math.random() * 120),
       costYuan: parseFloat((0.1 + Math.random() * 0.8).toFixed(4)),
+      qwenCostYuan: parseFloat((Math.random() * 0.2).toFixed(4)),
     })
   }
   return data
 }
-
-const mockFallbackData = generateMockCostDaily()
 
 // ─── Chart config for 3 metrics ───
 
@@ -64,8 +63,8 @@ const chartConfig = {
     label: "阿里云调用次数",
     color: "var(--chart-2)",
   },
-  otherTokens: {
-    label: "其他 Token",
+  qwenCostYuan: {
+    label: "Qwen 接管成本 (元)",
     color: "var(--chart-3)",
   },
 } satisfies ChartConfig
@@ -106,14 +105,14 @@ const METRICS = [
     valueFormatter: (v: number) => `${v.toLocaleString()} 次`,
   },
   {
-    key: "otherTokens" as const,
-    title: "其他 Token 消耗",
-    desc: "备用通道 / OCR 等模型预留",
-    unit: "token",
+    key: "qwenCostYuan" as const,
+    title: "Qwen 接管 Token 消耗",
+    desc: "Qwen-image-2.0 视觉接管每日累计成本（元）",
+    unit: "元",
     color: "var(--chart-3)",
-    gradientId: "fillCostOther",
-    dataKey: "otherTokens" as const,
-    valueFormatter: (v: number) => fmtToken(v),
+    gradientId: "fillCostQwen",
+    dataKey: "qwenCostYuan" as const,
+    valueFormatter: (v: number) => fmtYuan(v),
   },
 ] as const
 
@@ -137,11 +136,16 @@ export function CostDailyCharts({ data: propData }: CostDailyChartsProps) {
       .daily(days)
       .then((res) => setApiData(res.data.data))
       .catch(() => {
-        // silent fail — mock fallback already set
+        // silent fail — mock fallback computed lazily below
+        setApiData(null)
       })
   }, [timeRange])
 
-  const sourceData = propData ?? apiData ?? mockFallbackData
+  // 当前选中的天数（7/30/90）—— 用于 mock fallback 时按需生成对应天数
+  const timeRangeDays = timeRange === "90d" ? 90 : timeRange === "30d" ? 30 : 7
+
+  // 若后端尚未返回（首次加载或 fetch 失败），用 mock 填充到选定范围的天数，保证折线图不缺日期
+  const sourceData = propData ?? apiData ?? generateMockCostDaily(timeRangeDays)
 
   React.useEffect(() => {
     if (isMobile) {
@@ -150,13 +154,13 @@ export function CostDailyCharts({ data: propData }: CostDailyChartsProps) {
   }, [isMobile])
 
   // Build derived data: totalTokens = promptTokens + completionTokens
-  // otherTokens stays 0 (placeholder for future)
+  // qwenCostYuan 直接来自后端字段（Qwen 视觉接管每日累计成本，单位元）
   const chartData = React.useMemo(
     () =>
       sourceData.map((d) => ({
         ...d,
         totalTokens: d.promptTokens + d.completionTokens,
-        otherTokens: 0,
+        qwenCostYuan: d.qwenCostYuan ?? 0,
       })),
     [sourceData]
   )
@@ -236,7 +240,7 @@ function MetricChartCard({
     date: string
     totalTokens: number
     segmentCalls: number
-    otherTokens: number
+    qwenCostYuan: number
   }>
 }) {
   return (

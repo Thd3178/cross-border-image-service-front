@@ -87,31 +87,31 @@ export function SectionCards({ stats }: SectionCardsProps) {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            本月消耗{" "}
+            累计消耗{" "}
             <RiArrowDownLine className="size-4" />
           </div>
-          <div className="text-muted-foreground">包含 API 调用和资源费用</div>
+          <div className="text-muted-foreground">统计自使用本系统起的全部费用（含 Qwen 视觉接管）</div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>上传背景</CardDescription>
+          <CardDescription>Qwen 接管图片总数</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {fmt(stats.backgroundCount)}
+            {fmt(stats.qwenProcessedCount)}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <RiArrowUpLine />
-              {stats.backgroundCount}
+              {fmt(stats.qwenProcessedCount)}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            可用背景{" "}
+            视觉接管{" "}
             <RiArrowUpLine className="size-4" />
           </div>
-          <div className="text-muted-foreground">当前可选的背景模板数量</div>
+          <div className="text-muted-foreground">跳过分割/质检/合成，由 Qwen-image-2.0 直接出图</div>
         </CardFooter>
       </Card>
     </div>
@@ -204,30 +204,7 @@ export function SectionCards({ stats }: SectionCardsProps) {
       </Card>
     </div>
 
-    {/* ── Qwen takeover card (third row) ── */}
-    <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
-      <Card className="@container/card">
-        <CardHeader>
-          <CardDescription>Qwen 接管图片总数</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {fmt(stats.qwenProcessedCount)}
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <RiArrowUpLine />
-              {fmt(stats.qwenProcessedCount)}
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            视觉接管{" "}
-            <RiArrowUpLine className="size-4" />
-          </div>
-          <div className="text-muted-foreground">跳过分割/质检/合成，由 Qwen-image-2.0 直接出图</div>
-        </CardFooter>
-      </Card>
-    </div>
+    {/* ── Qwen takeover card moved to first row (replaced 上传背景 slot) ── */}
     </>
   )
 }
