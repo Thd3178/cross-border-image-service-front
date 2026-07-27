@@ -80,15 +80,13 @@ export function SectionCards({ stats }: SectionCardsProps) {
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              <RiArrowDownLine />
-              {toCNY(stats.totalExpense)}
+              累计 · {toCNY(stats.totalExpense)}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            累计消耗{" "}
-            <RiArrowDownLine className="size-4" />
+            累计消耗
           </div>
           <div className="text-muted-foreground">统计自使用本系统起的全部费用（含 Qwen 视觉接管）</div>
         </CardFooter>

@@ -106,7 +106,7 @@ const METRICS = [
   },
   {
     key: "qwenCostYuan" as const,
-    title: "Qwen 接管 Token 消耗",
+    title: "Qwen 接管成本 (元)",
     desc: "Qwen-image-2.0 视觉接管每日累计成本（元）",
     unit: "元",
     color: "var(--chart-3)",
@@ -144,8 +144,13 @@ export function CostDailyCharts({ data: propData }: CostDailyChartsProps) {
   // 当前选中的天数（7/30/90）—— 用于 mock fallback 时按需生成对应天数
   const timeRangeDays = timeRange === "90d" ? 90 : timeRange === "30d" ? 30 : 7
 
-  // 若后端尚未返回（首次加载或 fetch 失败），用 mock 填充到选定范围的天数，保证折线图不缺日期
-  const sourceData = propData ?? apiData ?? generateMockCostDaily(timeRangeDays)
+  // 若后端尚未返回（首次加载或 fetch 失败），用 mock 填充到选定范围的天数，保证
+  // 折线图不缺日期. useMemo 缓存避免每次 render 都重抽随机数导致折线抖动 (审查 L4).
+  const mockData = React.useMemo(
+    () => generateMockCostDaily(timeRangeDays),
+    [timeRangeDays]
+  )
+  const sourceData = propData ?? apiData ?? mockData
 
   React.useEffect(() => {
     if (isMobile) {
