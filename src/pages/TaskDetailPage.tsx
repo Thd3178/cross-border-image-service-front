@@ -765,8 +765,12 @@ export default function TaskDetailPage() {
   // ── Derived state ──
 
   const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "USER_SELECTING" || task?.status === "PARTIAL_COMPLETED"
+  // "查看详情" 按钮: 处理中、部分完成、全部完成 都该显示.
+  // 之前漏了 PARTIAL_COMPLETED, 导致部分完成的已 COMPLETED item 看不到详情入口.
   const viewDetailMode =
-    task?.status === "PROCESSING" || task?.status === "COMPLETED"
+    task?.status === "PROCESSING"
+    || task?.status === "PARTIAL_COMPLETED"
+    || task?.status === "COMPLETED"
   const showItems =
     items.length > 0 && task && ALLOW_ITEMS_STATUSES.has(task.status)
 
