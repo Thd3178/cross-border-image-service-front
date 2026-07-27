@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
   imageApi,
+  triggerDownload,
   type ItemStatus,
   type Task,
   type TaskItem,
@@ -18,7 +19,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card"
-import { RiArrowGoBackLine, RiRefreshLine } from "@remixicon/react"
+import { RiArrowGoBackLine, RiRefreshLine, RiDownloadLine } from "@remixicon/react"
 
 // ─── Status display config ───
 
@@ -857,6 +858,8 @@ export default function TaskDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   /** Qwen 视觉模型全权接管提交中，独立 loading state 防止与原流程按钮互锁 */
   const [qwenSubmitting, setQwenSubmitting] = useState(false)
+  /** 一键下载结果包进行中, 独立 loading state 不与提交按钮互锁 */
+  const [downloading, setDownloading] = useState(false)
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -1065,6 +1068,25 @@ export default function TaskDetailPage() {
     }
   }
 
+  const handleDownload = async () => {
+    if (downloading) return
+    setDownloading(true)
+    try {
+      const blob = await imageApi.downloadTaskResults(numericTaskId)
+      // zip 外名格式 跨境图片-yyyyMMdd-taskId.zip
+      // task.createdAt 已是 ISO 字符串
+      const tsPart = task
+        ? new Date(task.createdAt).toISOString().slice(0, 10).replace(/-/g, "")
+        : "unknown"
+      triggerDownload(blob, `跨境图片-${tsPart}-${numericTaskId}.zip`)
+      toast.success("下载已开始")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "下载失败")
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   const handleViewDetail = useCallback(
     (itemId: number) => {
       navigate(`/items/${itemId}`)
@@ -1181,6 +1203,12 @@ export default function TaskDetailPage() {
             <Button variant="outline" onClick={handleRetry}>
               <RiRefreshLine className="mr-1 size-4" />
               重试
+            </Button>
+          )}
+          {(task.status === "COMPLETED" || task.status === "PARTIAL_COMPLETED") && (
+            <Button variant="default" onClick={handleDownload} disabled={downloading}>
+              <RiDownloadLine className="mr-1 size-4" />
+              {downloading ? "打包中..." : "下载结果包"}
             </Button>
           )}
         </div>

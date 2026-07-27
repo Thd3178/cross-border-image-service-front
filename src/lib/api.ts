@@ -182,6 +182,10 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // Response interceptor: unwrap data, handle 401
 api.interceptors.response.use(
   (res) => {
+    // 二进制响应 (Blob/arrayBuffer) 不走 ApiResponse unwrap, 直接返回 (例: zip 下载)
+    if (res.config.responseType === "arraybuffer" || res.config.responseType === "blob") {
+      return res
+    }
     const body = res.data as ApiResponse<unknown>
     if (body.code !== 200) {
       return Promise.reject(new Error(body.message || "请求失败"))
@@ -286,9 +290,49 @@ export const imageApi = {
   retryTask: (taskId: number) =>
     api.post<ApiResponse<null>>(`/image/tasks/${taskId}/retry`),
 
+  /**
+   * 一键下载任务结果 zip
+   *
+   * @returns 解析后的 Blob (application/zip), 调用方配合 triggerDownload 触发浏览器下载
+   * @throws Error 后端返回 JSON 错误 ({ code, message }) 时抛 Error(message)
+   */
+  downloadTaskResults: async (taskId: number): Promise<Blob> => {
+    const res = await api.get(`/image/tasks/${taskId}/download`, {
+      responseType: "arraybuffer",
+    })
+    const contentType = (res.headers["content-type"] || "") as string
+    if (contentType.includes("application/json")) {
+      // 后端报错流出的 JSON body → arraybuffer → text → JSON → throw
+      const text = new TextDecoder().decode(new Uint8Array(res.data as ArrayBuffer))
+      let json: { code?: number; message?: string } = {}
+      try {
+        json = JSON.parse(text)
+      } catch {
+        // 非 JSON 的字符串 body — 走默认错误消息
+      }
+      throw new Error(json.message ?? "下载失败")
+    }
+    return new Blob([res.data as ArrayBuffer], { type: "application/zip" })
+  },
+
   /** Dashboard stats */
   stats: () =>
     api.get<ApiResponse<DashboardStats>>("/image/stats"),
+}
+
+/**
+ * 浏览器端触发文件下载 (避免 URL.createObjectURL + 隐藏 <a> 的样板代码在调用点重复)
+ */
+export function triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  // 1000ms 后 revoke 避免 DOM 树松开后某些浏览器 download 失败
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 // ─── Background API ───
