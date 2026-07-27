@@ -171,16 +171,12 @@ export function CostDailyCharts({ data: propData }: CostDailyChartsProps) {
   )
 
   // Filter by time range
-  const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date)
-    const referenceDate = new Date(chartData[chartData.length - 1].date)
-    let daysToSubtract = 90
-    if (timeRange === "30d") daysToSubtract = 30
-    else if (timeRange === "7d") daysToSubtract = 7
-    const startDate = new Date(referenceDate)
-    startDate.setDate(startDate.getDate() - daysToSubtract)
-    return date >= startDate
-  })
+  // NOTE: 后端 CostService.getDailyCost 已按 timeRangeDays 严格填充 today-6..today 共 N 个
+  // 日期 (含 0 数据的空格), 这里若再用 new Date(dateStr) 跨 UTC↔本地时区比较, 时区跨夜会让
+  // 最早一格被误过滤, 表现为"今天之前一天不显示". 直接复用后端 / mock 返回的全集即可.
+  // 当切到其他 toggle (7/30/90d) 时, useEffect 已重拉数据, sourceData 与 timeRange 一致,
+  // 不需要客户端二次过滤.
+  const filteredData = chartData
 
   return (
     <div className="flex flex-col gap-4">
@@ -286,8 +282,17 @@ function MetricChartCard({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={32}
+              minTickGap={16}
+              // 强制 domain = 日期最小到最大, 避免最早一格被 recharts 默认 padding 裁掉
+              domain={["dataMin", "dataMax"]}
+              padding={{ left: 0, right: 0 }}
               tickFormatter={(value: string) => {
+                // 直接用字符串前 5 位 ("MM-dd" 风格), 避免 new Date("2026-07-27") 的 UTC
+                // → 本地时区跨夜把 7/27 0:00 UTC 解析成 7/27 08:00 CST, XAxis tick 又被 recharts
+                // 内部按 Date 对象比较, UTC 误差会让最早的 tick 跳一格, 表现为"前一天不显示".
+                const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+                if (m) return `${m[2]}/${m[3]}`
+                // 兜底: 走原路径
                 const d = new Date(value)
                 return d.toLocaleDateString("zh-CN", {
                   month: "2-digit",
@@ -303,18 +308,28 @@ function MetricChartCard({
               content={
                 <ChartTooltipContent
                   indicator="line"
-                  labelFormatter={(value: string) => {
-                    const d = new Date(value)
+                  labelFormatter={(value) => {
+                    const label = typeof value === "string" ? value : String(value ?? "")
+                    // 兜底正则解 "yyyy-MM-dd", 避免 new Date("2026-07-27") 的 UTC 0:00
+                    // 在本地时区跨夜解析成 7/27 08:00, 让 tooltip label 显示错位.
+                    const m = label.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+                    if (m) {
+                      return `${m[1]} 年 ${Number(m[2])} 月 ${Number(m[3])} 日`
+                    }
+                    const d = new Date(label)
                     return d.toLocaleDateString("zh-CN", {
                       month: "long",
                       day: "numeric",
                     })
                   }}
-                  formatter={(value: number) => (
-                    <span className="font-mono font-medium tabular-nums">
-                      {metric.valueFormatter(value)}
-                    </span>
-                  )}
+                  formatter={(value) => {
+                    const v = typeof value === "number" ? value : Number(value ?? 0)
+                    return (
+                      <span className="font-mono font-medium tabular-nums">
+                        {metric.valueFormatter(v)}
+                      </span>
+                    )
+                  }}
                 />
               }
             />
@@ -323,7 +338,15 @@ function MetricChartCard({
               dataKey={metric.dataKey}
               stroke={metric.color}
               strokeWidth={2}
-              dot={false}
+              isAnimationActive={false}
+              connectNulls
+              // 给每个数据点画 dot: 即使只有 1 个点或值是 0, 也保证最早一格在图上可见,
+              // 不再因"line 单段过短被 XAxis padding 裁掉"而表现为缺一格.
+              dot={{
+                r: 2,
+                fill: metric.color,
+                strokeWidth: 0,
+              }}
               activeDot={{
                 r: 4,
                 stroke: metric.color,

@@ -16,11 +16,9 @@ import {
 } from "@/components/ui/sidebar"
 import {
   RiDashboardLine,
-  RiImageLine,
   RiListUnordered,
   RiSettingsLine,
   RiQuestionLine,
-  RiSearchLine,
   RiAddCircleLine,
   RiImageEditLine,
   RiUploadCloudLine,

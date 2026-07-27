@@ -9,6 +9,7 @@ export const STATUS_CONFIG: Record<
   SEARCH_COMPLETED: { label: "搜索完成", variant: "default" },
   USER_SELECTING: { label: "选择商品中", variant: "default" },
   PROCESSING: { label: "处理中", variant: "default" },
+  PARTIAL_COMPLETED: { label: "部分完成", variant: "default" },
   COMPLETED: { label: "已完成", variant: "default" },
   FAILED: { label: "失败", variant: "destructive" },
 }
@@ -19,6 +20,7 @@ export const STATUS_COLORS: Record<TaskStatus, string> = {
   SEARCH_COMPLETED: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   USER_SELECTING: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   PROCESSING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  PARTIAL_COMPLETED: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   COMPLETED: "bg-green-500/10 text-green-500 border-green-500/20",
   FAILED: "bg-red-500/10 text-red-500 border-red-500/20",
 }

@@ -156,71 +156,92 @@ export default function ItemDetailPage() {
         </Button>
         <h1 className="text-lg font-medium">商品详情</h1>
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* ── Left: Image Pipeline ── */}
-        <div className="flex flex-col gap-6">
-          <ImageCard title="原始图片" url={item.productImgUrl} />
-          {isQwenTakeover ? (
-            <>
-              {item.finalImgUrl && (
-                <ImageCard title="Qwen 编辑结果" url={item.finalImgUrl} />
-              )}
-              {item.status === "QWEN_EDITING" && (
-                <ProcessingPlaceholder label="Qwen 正在编辑中..." />
-              )}
-            </>
+
+      {/* ── 三卡横排对比 (原图 / 分割结果或占位 / 最终合成或Qwen编辑) ── */}
+      {/* 卡间分割线: 第 2、3 卡左边加 border-l */}
+      <div className="mb-6 grid grid-cols-1 gap-0 md:grid-cols-3 md:divide-x md:divide-border">
+        <ImageCard title="原始图片" url={item.productImgUrl} className="md:pr-4" />
+
+        {isQwenTakeover ? (
+          /* QWEN_TAKEOVER 模式: 中间格 = 空占位 ("未使用分割"); 第三格 = Qwen 编辑结果 */
+          <EmptyImageCard title="分割结果" note="此模式不使用分割" className="md:px-4" />
+        ) : (
+          <ImageCard
+            title="分割结果"
+            url={item.segmentedImgUrl}
+            className="md:px-4"
+            placeholder={
+              item.status === "SEGMENTING"
+                ? "分割中..."
+                : "暂无分割结果"
+            }
+          />
+        )}
+
+        {isQwenTakeover ? (
+          item.status === "QWEN_EDITING" ? (
+            <ProcessingPlaceholder label="Qwen 编辑结果" className="md:pl-4" />
           ) : (
-            <>
-              {item.segmentedImgUrl && (
-                <ImageCard title="分割结果" url={item.segmentedImgUrl} />
-              )}
-              {item.finalImgUrl && (
-                <ImageCard title="最终合成" url={item.finalImgUrl} />
-              )}
-            </>
-          )}
-        </div>
+            <ImageCard
+              title="Qwen 编辑结果"
+              url={item.finalImgUrl}
+              className="md:pl-4"
+              placeholder="暂无 Qwen 编辑结果"
+            />
+          )
+        ) : (
+          <ImageCard
+            title="最终合成"
+            url={item.finalImgUrl}
+            className="md:pl-4"
+            placeholder={
+              item.status === "COMPOSITING"
+                ? "合成中..."
+                : "暂无最终合成"
+            }
+          />
+        )}
+      </div>
 
-        {/* ── Right: Status & Info ── */}
-        <div className="flex flex-col gap-6">
-          {/* Status card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>处理状态</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <StatusBadge status={item.status} />
-                <Badge
-                  variant="outline"
-                  className={
-                    isQwenTakeover
-                      ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400"
-                      : "bg-muted text-muted-foreground"
-                  }
-                >
-                  {isQwenTakeover ? "视觉接管" : "原流程"}
-                </Badge>
-                {isProgressing && (
-                  <span className="animate-pulse text-sm text-muted-foreground">
-                    处理中...
-                  </span>
-                )}
+      {/* ── 信息区: 状态/模式一行 + 质检一行 + 商品一行；错误附在状态行旁 ── */}
+      <div className="flex flex-col gap-4">
+        {/* Row 1: 状态 / 模式 / 处理中提示 / 错误附在右侧 */}
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-3 p-4">
+            <CardHeaderCompact title="处理状态" />
+            <div className="flex items-center gap-2">
+              <StatusBadge status={item.status} />
+              <Badge
+                variant="outline"
+                className={
+                  isQwenTakeover
+                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400"
+                    : "bg-muted text-muted-foreground"
+                }
+              >
+                {isQwenTakeover ? "视觉接管" : "原流程"}
+              </Badge>
+              {isProgressing && (
+                <span className="animate-pulse text-sm text-muted-foreground">
+                  处理中...
+                </span>
+              )}
+            </div>
+
+            {/* 错误信息贴在状态行右侧（如有） */}
+            {item.status === "FAILED" && item.errorMsg && (
+              <div className="ml-auto rounded-lg bg-destructive/10 p-2.5 text-sm text-destructive">
+                {item.errorMsg}
               </div>
-              {item.status === "FAILED" && item.errorMsg && (
-                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                  {item.errorMsg}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Processing mode card (新增) */}
+        {/* Row 1b: 处理模式切换 */}
+        {canToggleMode && (
           <Card>
-            <CardHeader>
-              <CardTitle>处理模式</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="flex flex-wrap items-center gap-3 p-4">
+              <CardHeaderCompact title="处理模式" />
               <ToggleGroup
                 type="single"
                 value={item.processingMode}
@@ -229,114 +250,96 @@ export default function ItemDetailPage() {
                     void handleModeChange(v)
                   }
                 }}
-                disabled={!canToggleMode || modeSaving}
-                className="w-full"
+                disabled={modeSaving}
+                className="w-auto"
               >
                 <ToggleGroupItem
                   value="PIPELINE"
-                  className="flex-1"
                   aria-label="原流程"
                 >
                   原流程
                 </ToggleGroupItem>
                 <ToggleGroupItem
                   value="QWEN_TAKEOVER"
-                  className="flex-1"
                   aria-label="视觉接管"
                 >
                   视觉接管
                 </ToggleGroupItem>
               </ToggleGroup>
-              {!canToggleMode && (
-                <p className="text-xs text-muted-foreground">
-                  处理中或已完成，无法切换处理模式
-                </p>
-              )}
-              {isQwenTakeover && (
+              {isQwenTakeover ? (
                 <p className="text-xs text-indigo-600 dark:text-indigo-400">
                   视觉接管：跳过分割/质检/合成，由 Qwen 直接编辑出图
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  切换模式仅限处理前
                 </p>
               )}
             </CardContent>
           </Card>
+        )}
 
-          {/* Product info card */}
+        {/* Row 2: 质检结果 (仅原流程 适用阶段展示) */}
+        {showQuality && (
           <Card>
-            <CardHeader>
-              <CardTitle>商品信息</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {item.productTitle ? (
-                <div>
-                  <p className="text-xs text-muted-foreground">商品标题</p>
-                  <p className="text-sm font-medium">{item.productTitle}</p>
+            <CardContent className="p-4 space-y-3">
+              <CardHeaderCompact title="质检结果" />
+              {item.overallVerdict && isVerdict(item.overallVerdict) && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">综合判定</span>
+                  <VerdictBadge verdict={item.overallVerdict} />
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">暂无商品标题</p>
               )}
-              {item.productPrice != null && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <QualityCheckItem
+                  label="居中检测"
+                  passed={item.isCentered}
+                />
+                <QualityCheckItem
+                  label="方形检测"
+                  passed={item.isSquare}
+                />
+              </div>
+              {item.cropRect && (
                 <div>
-                  <p className="text-xs text-muted-foreground">商品价格</p>
-                  <p className="text-sm font-medium">
-                    {item.productPrice}元
+                  <p className="text-xs text-muted-foreground">裁剪区域</p>
+                  <p className="mt-0.5 font-mono text-sm">{item.cropRect}</p>
+                </div>
+              )}
+              {item.hasViolations && item.violations && (
+                <div>
+                  <p className="text-xs text-muted-foreground">违规内容</p>
+                  <p className="mt-0.5 text-sm text-destructive">
+                    {item.violations}
                   </p>
                 </div>
               )}
             </CardContent>
           </Card>
+        )}
 
-          {/* Quality check card */}
-          {showQuality && (
-            <Card>
-              <CardHeader>
-                <CardTitle>质检结果</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {item.overallVerdict && isVerdict(item.overallVerdict) && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">
-                      综合判定
-                    </span>
-                    <VerdictBadge verdict={item.overallVerdict} />
-                  </div>
-                )}
-                {/* 视觉接管模式不经过质检，overall_verdict 写死 'qwen_takeover'，
-                    isVerdict() 不匹配，自然不显示 VerdictBadge，无需特判 */}
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <QualityCheckItem
-                    label="居中检测"
-                    passed={item.isCentered}
-                  />
-                  <QualityCheckItem
-                    label="方形检测"
-                    passed={item.isSquare}
-                  />
-                </div>
-
-                {item.cropRect && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">裁剪区域</p>
-                    <p className="mt-0.5 font-mono text-sm">
-                      {item.cropRect}
-                    </p>
-                  </div>
-                )}
-
-                {item.hasViolations && item.violations && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      违规内容
-                    </p>
-                    <p className="mt-0.5 text-sm text-destructive">
-                      {item.violations}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {/* Row 3: 商品信息 */}
+        <Card>
+          <CardContent className="p-4 flex flex-wrap gap-6">
+            <CardHeaderCompact title="商品信息" />
+            {item.productTitle ? (
+              <div>
+                <p className="text-xs text-muted-foreground">商品标题</p>
+                <p className="text-sm font-medium">{item.productTitle}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">暂无商品标题</p>
+            )}
+            {item.productPrice != null && (
+              <div>
+                <p className="text-xs text-muted-foreground">商品价格</p>
+                <p className="text-sm font-medium">
+                  {item.productPrice}元
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
@@ -344,9 +347,26 @@ export default function ItemDetailPage() {
 
 // ─── Sub-components ───
 
-function ImageCard({ title, url }: { title: string; url?: string }) {
+// 卡片内嵌标题（替代原 CardHeader, 让信息行的卡片更紧凑）
+function CardHeaderCompact({ title }: { title: string }) {
   return (
-    <Card>
+    <p className="text-sm font-semibold text-foreground whitespace-nowrap">
+      {title}
+    </p>
+  )
+}
+
+interface ImageCardProps {
+  title: string
+  url?: string
+  className?: string
+  /** 自定义无图时的占位提示文案 */
+  placeholder?: string
+}
+
+function ImageCard({ title, url, className, placeholder = "暂无图片" }: ImageCardProps) {
+  return (
+    <Card className={className}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
@@ -362,9 +382,32 @@ function ImageCard({ title, url }: { title: string; url?: string }) {
           </div>
         ) : (
           <div className="flex aspect-square items-center justify-center rounded-xl bg-muted text-sm text-muted-foreground">
-            暂无图片
+            {placeholder}
           </div>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+interface EmptyImageCardProps {
+  title: string
+  note: string
+  className?: string
+}
+
+// 空占位卡片: 用于 QWEN_TAKEOVER 模式下不展示分割结果时, 三卡布局保留位置占位 "--"
+function EmptyImageCard({ title, note, className }: EmptyImageCardProps) {
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-muted text-muted-foreground">
+          <span className="text-3xl font-light text-muted-foreground/50">—</span>
+          <span className="text-sm text-muted-foreground">{note}</span>
+        </div>
       </CardContent>
     </Card>
   )
@@ -453,9 +496,9 @@ function QualityCheckItem({
   )
 }
 
-function ProcessingPlaceholder({ label }: { label: string }) {
+function ProcessingPlaceholder({ label, className }: { label: string; className?: string }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle>{label}</CardTitle>
       </CardHeader>
@@ -503,33 +546,30 @@ function NotFoundState() {
 function ItemDetailSkeleton() {
   return (
     <div className="container mx-auto p-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-6">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-5 w-20" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="aspect-square w-full rounded-xl" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="flex flex-col gap-6">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-5 w-24" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-4 w-40" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {/* 三卡横排骨架 */}
+      <div className="grid grid-cols-1 gap-0 md:grid-cols-3 md:divide-x md:divide-border">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className={i === 1 ? "md:pr-4" : i === 2 ? "md:px-4" : "md:pl-4"}>
+            <CardHeader>
+              <Skeleton className="h-5 w-20" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="aspect-square w-full rounded-xl" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {/* 信息区骨架 */}
+      <div className="mt-4 flex flex-col gap-3">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardContent className="flex items-center gap-3 p-4">
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-5 w-24" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   )
