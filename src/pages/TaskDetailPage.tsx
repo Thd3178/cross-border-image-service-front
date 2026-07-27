@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -73,6 +73,9 @@ const STATUS_CONFIG: Record<
 function formatDateTime(dateStr: string): string {
   try {
     const d = new Date(dateStr)
+    // new Date("invalid") 不抛错而是返回 Invalid Date, catch 永不触发,
+    // 必须显式用 isNaN 检查避免渲染 NaN/NaN/NaN (审查 L2).
+    if (isNaN(d.getTime())) return dateStr
     return d.toLocaleString("zh-CN", {
       year: "numeric",
       month: "2-digit",
@@ -129,12 +132,12 @@ const ITEM_STATUS_STYLE: Record<ItemStatus, string> = {
 }
 
 // ─── Status stamp palette (右上角印章样式) ───
-// 每个状态对应的印章颜色：边框 / 文字 / 背景（透明带轻微淡色，类似真章盖在纸上）
+// 每个状态对应的印章颜色：边框 / 文字 / 背景（透明带轻微淡色, 类似真章盖在纸上）
+// 全部配色走 style 内联; className 字段为历史死代码已移除 (审查 L6).
 type StampPalette = {
   borderColor: string
   textColor: string
   bgColor: string
-  className: string
 }
 
 const ITEM_STAMP_STYLE: Record<ItemStatus, StampPalette> = {
@@ -142,80 +145,67 @@ const ITEM_STAMP_STYLE: Record<ItemStatus, StampPalette> = {
     borderColor: "#94a3b8",
     textColor: "#94a3b8",
     bgColor: "rgba(148, 163, 184, 0.08)",
-    className: "",
   },
   SELECTED: {
     borderColor: "#3b82f6",
     textColor: "#1d4ed8",
     bgColor: "rgba(59, 130, 246, 0.10)",
-    className: "",
   },
   SEGMENTING: {
     borderColor: "#a855f7",
     textColor: "#7e22ce",
     bgColor: "rgba(168, 85, 247, 0.12)",
-    className: "",
   },
   SEGMENTED: {
     borderColor: "#06b6d4",
     textColor: "#0e7490",
     bgColor: "rgba(6, 182, 212, 0.10)",
-    className: "",
   },
   ANALYZING: {
     borderColor: "#a855f7",
     textColor: "#7e22ce",
     bgColor: "rgba(168, 85, 247, 0.12)",
-    className: "",
   },
   ANALYZED: {
     borderColor: "#14b8a6",
     textColor: "#0f766e",
     bgColor: "rgba(20, 184, 166, 0.10)",
-    className: "",
   },
   INPAINTING: {
     borderColor: "#a855f7",
     textColor: "#7e22ce",
     bgColor: "rgba(168, 85, 247, 0.12)",
-    className: "",
   },
   INPAINTED: {
     borderColor: "#14b8a6",
     textColor: "#0f766e",
     bgColor: "rgba(20, 184, 166, 0.10)",
-    className: "",
   },
   COMPOSITING: {
     borderColor: "#a855f7",
     textColor: "#7e22ce",
     bgColor: "rgba(168, 85, 247, 0.12)",
-    className: "",
   },
   QWEN_EDITING: {
     borderColor: "#6366f1",
     textColor: "#4338ca",
     bgColor: "rgba(99, 102, 241, 0.12)",
-    className: "",
   },
   COMPLETED: {
+    // COMPLETED 用更醒目的红色印章（传统公章朱红）
     borderColor: "#dc2626",
     textColor: "#b91c1c",
     bgColor: "rgba(220, 38, 38, 0.10)",
-    // COMPLETED 用更醒目的红色印章（传统公章朱红）
-    className: "",
   },
   FAILED: {
     borderColor: "#7f1d1d",
     textColor: "#7f1d1d",
     bgColor: "rgba(127, 29, 29, 0.10)",
-    className: "",
   },
   CANCELLED: {
     borderColor: "#475569",
     textColor: "#475569",
     bgColor: "rgba(71, 85, 105, 0.10)",
-    className: "",
   },
 }
 
@@ -476,19 +466,23 @@ function StepBubble({ ordinal, label, inProgress, done, active, completed, accen
   )
 }
 
-function PipelineDiagram({ items, task }: PipelineDiagramProps) {
+const PipelineDiagram = memo(function PipelineDiagram({ items, task }: PipelineDiagramProps) {
+  // 派生值 memo 化: items 来自父组件 5s 轮询, 同一 items 引用直接复用前一次计算.
   if (items.length === 0) return null
 
-  const qwenItems = items.filter((it) => it.processingMode === "QWEN_TAKEOVER")
-  const pipelineItems = items.filter((it) => it.processingMode !== "QWEN_TAKEOVER")
+  const qwenItems = useMemo(
+    () => items.filter((it) => it.processingMode === "QWEN_TAKEOVER"),
+    [items]
+  )
+  const pipelineItems = useMemo(
+    () => items.filter((it) => it.processingMode !== "QWEN_TAKEOVER"),
+    [items]
+  )
   const hasQwen = qwenItems.length > 0
   const hasPipeline = pipelineItems.length > 0
   const isMixed = hasQwen && hasPipeline
   const mode = !hasQwen ? "PIPELINE" : !hasPipeline ? "QWEN" : "MIXED"
 
-  const isTerminal = task?.status === "COMPLETED" || task?.status === "FAILED"
-
-  // 模式标题
   const modeLabel = mode === "QWEN"
     ? "Qwen 视觉接管模式"
     : mode === "MIXED"
@@ -507,10 +501,13 @@ function PipelineDiagram({ items, task }: PipelineDiagramProps) {
   // ─── 纯 PIPELINE / 纯 QWEN：单路渲染 ───
   if (!isMixed) {
     const steps = mode === "QWEN" ? QWEN_STEPS : PIPELINE_STEPS
-    const stats = computeStepStats(items, steps)
-    const activeIdx = pickActiveStep(stats)
+    const stats = useMemo(
+      () => computeStepStats(items, steps),
+      // steps 是模块常量或由 mode 确定的常量数组, items 变化触发重算
+      [items, steps]
+    )
+    const activeIdx = useMemo(() => pickActiveStep(stats), [stats])
 
-    // 终态色：COMPLETED 全绿; PARTIAL_COMPLETED 都琥珀; FAILED 都灰
     const forceAllCompleted = task?.status === "COMPLETED"
     const forceAllPartial = task?.status === "PARTIAL_COMPLETED"
 
@@ -526,13 +523,13 @@ function PipelineDiagram({ items, task }: PipelineDiagramProps) {
           {steps.map((step, idx) => {
             const s = stats[idx]
             const isLast = idx === steps.length - 1
-            // 终态 override
             const overrideCompleted = forceAllCompleted && isLast
               ? true
               : forceAllPartial && step.label === "部分完成"
                 ? true
                 : false
-            const allDone = s.done > 0 && s.inProgress === 0 && idx < activeIdx
+            // L3: 用 <= activeIdx 让 idx === activeIdx 但 inProgress=0 的临界窗口也有 completed 视觉
+            const allDone = s.done > 0 && s.inProgress === 0 && idx <= activeIdx
             const lastStepDoneAfterAll = isLast && s.done === items.length && items.length > 0
             const completed = overrideCompleted || allDone || lastStepDoneAfterAll
             const active = idx === activeIdx && s.inProgress > 0 && !overrideCompleted
@@ -575,26 +572,31 @@ function PipelineDiagram({ items, task }: PipelineDiagramProps) {
   }
 
   // ─── 混合模式：分支渲染 ───
-  // 上路: PIPELINE 5 步 (不含终态) - 分割/质检/修复/合成 - 用 pipelineItems 算 stats
-  // 下路: QWEN 1 步 - Qwen 编辑 - 用 qwenItems 算 stats
-  // 起点共享: 待处理 (用所有 items 的 PENDING/SELECTED)
-  // 汇合节点: 部分完成 → 已完成 (基于 task.status)
-  const pipelineBranchSteps = PIPELINE_STEPS.slice(1, 5) // 分割/质检/修复/合成 (4 步, key 1-4)
-  const qwenBranchSteps = QWEN_STEPS.slice(1, 2) // Qwen 编辑 (1 步, key 1)
+  const pipelineBranchSteps = PIPELINE_STEPS.slice(1, 5)
+  const qwenBranchSteps = QWEN_STEPS.slice(1, 2)
 
-  const pipelineStats = computeStepStats(pipelineItems, pipelineBranchSteps)
-  const qwenStats = computeStepStats(qwenItems, qwenBranchSteps)
-  const pipelineActiveIdx = pickActiveStep(pipelineStats)
-  const qwenActiveIdx = pickActiveStep(qwenStats)
+  const pipelineStats = useMemo(
+    () => computeStepStats(pipelineItems, pipelineBranchSteps),
+    [pipelineItems]
+  )
+  const qwenStats = useMemo(
+    () => computeStepStats(qwenItems, qwenBranchSteps),
+    [qwenItems]
+  )
+  const pipelineActiveIdx = useMemo(() => pickActiveStep(pipelineStats), [pipelineStats])
+  const qwenActiveIdx = useMemo(() => pickActiveStep(qwenStats), [qwenStats])
 
-  // 待处理统计 (共享起点)
-  const pendingInProgress = items.filter((it) => it.status === "PENDING" || it.status === "SELECTED").length
+  const pendingInProgress = useMemo(
+    () => items.filter((it) => it.status === "PENDING" || it.status === "SELECTED").length,
+    [items]
+  )
   const pendingActive = pendingInProgress > 0 && task?.status === "PROCESSING"
 
-  // 汇合节点 state
-  const totalCompleted = items.filter((it) => it.status === "COMPLETED").length
+  const totalCompleted = useMemo(
+    () => items.filter((it) => it.status === "COMPLETED").length,
+    [items]
+  )
   const allDone = totalCompleted === items.length
-  const partialDone = totalCompleted > 0 && totalCompleted < items.length
   const partialNodeActive = task?.status === "PARTIAL_COMPLETED"
   const completedNodeCompleted = task?.status === "COMPLETED"
   const completedNodeActive = allDone && !completedNodeCompleted
@@ -607,10 +609,7 @@ function PipelineDiagram({ items, task }: PipelineDiagramProps) {
           {modeLabel}{stageLabel}
         </span>
       </div>
-      {/* Layout: [待处理] ──┬──上路 PIPELINE 4 步──┐──[部分完成]──[已完成]
-                     └──下路 Qwen 1 步 ──┘ */}
       <div className="grid grid-cols-[auto_1fr_auto] items-stretch gap-0">
-        {/* col 1: 待处理 (跨上路+下路 两行) */}
         <div className="flex flex-col items-center justify-center pr-3">
           <StepBubble
             ordinal={1}
@@ -622,13 +621,11 @@ function PipelineDiagram({ items, task }: PipelineDiagramProps) {
             accent="indigo"
           />
         </div>
-        {/* col 2: 上下两路 */}
         <div className="flex flex-col gap-3 py-1">
-          {/* 上路: PIPELINE 4 步 */}
           <div className="flex items-center">
             {pipelineBranchSteps.map((step, idx) => {
               const s = pipelineStats[idx]
-              const allDone = s.done > 0 && s.inProgress === 0 && idx < pipelineActiveIdx
+              const allDone = s.done > 0 && s.inProgress === 0 && idx <= pipelineActiveIdx
               const active = idx === pipelineActiveIdx && s.inProgress > 0
               const completed = allDone
               const isLast = idx === pipelineBranchSteps.length - 1
@@ -663,11 +660,10 @@ function PipelineDiagram({ items, task }: PipelineDiagramProps) {
               )
             })}
           </div>
-          {/* 下路: QWEN 1 步 */}
           <div className="flex items-center">
             {qwenBranchSteps.map((step, idx) => {
               const s = qwenStats[idx]
-              const allDone = s.done > 0 && s.inProgress === 0 && idx < qwenActiveIdx
+              const allDone = s.done > 0 && s.inProgress === 0 && idx <= qwenActiveIdx
               const active = idx === qwenActiveIdx && s.inProgress > 0
               const completed = allDone
               return (
@@ -688,13 +684,11 @@ function PipelineDiagram({ items, task }: PipelineDiagramProps) {
                 </div>
               )
             })}
-            {/* 下路占位 (与上路 4 步对齐时长度的填补) */}
             <div className="flex-1" />
             <div className="flex-1" />
             <div className="flex-1" />
           </div>
         </div>
-        {/* col 3: 汇合 - 部分完成 + 已完成 */}
         <div className="flex items-center pl-3">
           <div className="flex items-center">
             <StepBubble
@@ -729,7 +723,7 @@ function PipelineDiagram({ items, task }: PipelineDiagramProps) {
       </div>
     </div>
   )
-}
+})
 
 function ProductCard({
   item,
@@ -739,21 +733,35 @@ function ProductCard({
   onToggle,
   onViewDetail,
 }: ProductCardProps) {
+  // 已成功 / 失败 / 已取消的商品在 selectingMode 下不可再被勾选 — 后端语义要求
+  // 已 COMPLETED 的 item 的状态不应被覆盖 (后端 ImageTaskService.selectItems 已
+  // 做合约级兜底, 这里前端禁选避免用户误选后白白一次往返).
+  // 同时 PARTIAL_COMPLETED 状态 selectingMode=true 但 COMPLETED item 要禁选.
+  const itemSelectable =
+    item.status !== "COMPLETED" &&
+    item.status !== "FAILED" &&
+    item.status !== "CANCELLED"
+
   return (
     <Card size="sm" className="relative">
-      {/* Checkbox overlay */}
+      {/* Checkbox overlay — 仅在 selectingMode 且 item 可选时显示 */}
       {selectingMode && (
-        <div
+        <label
           className={cn(
-            "absolute left-2 top-2 z-10 cursor-pointer rounded-full bg-background/70 p-1 backdrop-blur-sm",
-            selected && "bg-primary/10"
+            "absolute left-2 top-2 z-10 inline-flex items-center justify-center rounded-full bg-background/70 p-1 backdrop-blur-sm",
+            itemSelectable
+              ? "cursor-pointer"
+              : "cursor-not-allowed opacity-50",
+            selected && itemSelectable && "bg-primary/10"
           )}
-          onClick={() => onToggle(item.id)}
+          aria-label={`选择商品 ${item.productTitle ?? ""} (状态: ${item.status})`}
         >
           <Checkbox
             checked={selected}
+            disabled={!itemSelectable}
+            onCheckedChange={() => itemSelectable && onToggle(item.id)}
           />
-        </div>
+        </label>
       )}
 
       {/* Stamp disabled in selecting mode; show rotated seal on image top-right otherwise (lines below) */}
@@ -784,10 +792,7 @@ function ProductCard({
                 aria-hidden
               >
                 <div
-                  className={cn(
-                    "flex items-center justify-center rounded-md border-2 px-3 py-1.5 text-[13px] font-bold tracking-wider uppercase shadow-sm backdrop-blur-[1px]",
-                    palette.className,
-                  )}
+                  className="flex items-center justify-center rounded-md border-2 px-3 py-1.5 text-[13px] font-bold tracking-wider uppercase shadow-sm backdrop-blur-[1px]"
                   style={{ borderColor: palette.borderColor, color: palette.textColor, backgroundColor: palette.bgColor }}
                 >
                   {label}
@@ -923,7 +928,13 @@ export default function TaskDetailPage() {
     task?.status === "PROCESSING" || task?.status === "COMPLETED"
   const showItems =
     items.length > 0 && task && ALLOW_ITEMS_STATUSES.has(task.status)
-  const allSelected = items.length > 0 && selectedIds.size === items.length
+
+  // 可被勾选的 item: 排除 COMPLETED / FAILED / CANCELLED (后端语义要求已成功 item
+  // 不应被覆盖). selectableItems 也用来过滤全选按钮与"已选全部"判定.
+  const selectableItems = items.filter(
+    (i) => i.status !== "COMPLETED" && i.status !== "FAILED" && i.status !== "CANCELLED"
+  )
+  const allSelected = selectableItems.length > 0 && selectedIds.size === selectableItems.length
 
   // ── Actions ──
 
@@ -945,9 +956,25 @@ export default function TaskDetailPage() {
       return
     }
 
+    // 防御兜底: 即使前端禁选, 若 selectedIds 出于任何 stale 来源混入已 COMPLETED/
+    // FAILED / CANCELLED 的 id, 提交前先剔掉, 不让到达后端.
+    const safeIds = Array.from(selectedIds).filter(
+      (id) => {
+        const it = items.find((i) => i.id === id)
+        return it
+          && it.status !== "COMPLETED"
+          && it.status !== "FAILED"
+          && it.status !== "CANCELLED"
+      }
+    )
+    if (safeIds.length === 0) {
+      toast.warning("已完成的商品不可再次处理, 请选择未处理的商品")
+      return
+    }
+
     setSubmitting(true)
     try {
-      await imageApi.selectItems(numericTaskId, Array.from(selectedIds))
+      await imageApi.selectItems(numericTaskId, safeIds)
       toast.success("已提交处理请求")
       await fetchTask()
     } catch (err) {
@@ -974,7 +1001,20 @@ export default function TaskDetailPage() {
 
     setQwenSubmitting(true)
     try {
-      const ids = Array.from(selectedIds)
+      // 防御兜底: 同 handleSelectItems, 提交前剔掉不可选 item 的 id.
+      const ids = Array.from(selectedIds).filter(
+        (id) => {
+          const it = items.find((i) => i.id === id)
+          return it
+            && it.status !== "COMPLETED"
+            && it.status !== "FAILED"
+            && it.status !== "CANCELLED"
+        }
+      )
+      if (ids.length === 0) {
+        toast.warning("已完成的商品不可再次处理")
+        return
+      }
       const mode: ProcessingMode = "QWEN_TAKEOVER"
 
       // 1. 批量切换模式 — 用 Promise.allSettled 记录失败, 任一失败就终止提交流程
@@ -1007,11 +1047,13 @@ export default function TaskDetailPage() {
   const handleToggleSelectAll = useCallback(() => {
     if (items.length === 0) return
     if (allSelected) {
+      // 已全选 → 取消全部 (留空, 后端也不要 selectedIds 为空提交时被发)
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(items.map((i) => i.id)))
+      // 未全选 → 选全部 "可选" 的 item (排除 COMPLETED / FAILED / CANCELLED)
+      setSelectedIds(new Set(selectableItems.map((i) => i.id)))
     }
-  }, [allSelected, items])
+  }, [allSelected, items, selectableItems])
 
   const handleRetry = async () => {
     try {
@@ -1065,6 +1107,7 @@ export default function TaskDetailPage() {
           size="icon"
           className="-ml-2 shrink-0"
           onClick={() => navigate(-1)}
+          aria-label="返回上一页"
         >
           <RiArrowGoBackLine className="size-5" />
         </Button>
@@ -1134,7 +1177,7 @@ export default function TaskDetailPage() {
               </Button>
             </>
           )}
-          {task.status === "FAILED" && (
+          {(task.status === "FAILED" || task.status === "PARTIAL_COMPLETED") && (
             <Button variant="outline" onClick={handleRetry}>
               <RiRefreshLine className="mr-1 size-4" />
               重试
