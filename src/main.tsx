@@ -9,7 +9,7 @@ import { AuthProvider } from "@/lib/auth-context.tsx"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/image">
       <ThemeProvider>
         <AuthProvider>
           <App />
