@@ -290,22 +290,6 @@ export default function ItemDetailPage() {
                   <VerdictBadge verdict={item.overallVerdict} />
                 </div>
               )}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <QualityCheckItem
-                  label="居中检测"
-                  passed={item.isCentered}
-                />
-                <QualityCheckItem
-                  label="方形检测"
-                  passed={item.isSquare}
-                />
-              </div>
-              {item.cropRect && (
-                <div>
-                  <p className="text-xs text-muted-foreground">裁剪区域</p>
-                  <p className="mt-0.5 font-mono text-sm">{item.cropRect}</p>
-                </div>
-              )}
               {item.hasViolations && item.violations && (
                 <div>
                   <p className="text-xs text-muted-foreground">违规内容</p>
@@ -473,26 +457,6 @@ function VerdictBadge({ verdict }: { verdict: Verdict }) {
     <Badge variant={c.variant} className={c.className}>
       {c.icon} {VERDICT_LABEL[verdict]}
     </Badge>
-  )
-}
-
-function QualityCheckItem({
-  label,
-  passed,
-}: {
-  label: string
-  passed?: boolean
-}) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg border p-3">
-      <span className={passed ? "text-green-600" : "text-destructive"}>
-        {passed ? "✓" : "✗"}
-      </span>
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium">{passed ? "是" : "否"}</p>
-      </div>
-    </div>
   )
 }
 

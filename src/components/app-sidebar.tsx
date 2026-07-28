@@ -95,7 +95,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <Link to="/dashboard">
                 <RiImageEditLine className="size-5!" />
                 <span className="text-base font-semibold">
-                  图片处理站
+                  行知澜ParaWave
                 </span>
               </Link>
             </SidebarMenuButton>

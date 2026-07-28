@@ -286,10 +286,6 @@ export const imageApi = {
       { processingMode: mode }
     ),
 
-  /** Retry failed task */
-  retryTask: (taskId: number) =>
-    api.post<ApiResponse<null>>(`/image/tasks/${taskId}/retry`),
-
   /**
    * 一键下载任务结果 zip
    *
