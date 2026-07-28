@@ -6,7 +6,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
 
 export function NavMain({
   items,
@@ -31,10 +30,6 @@ export function NavMain({
                   asChild
                   tooltip={item.title}
                   data-active={isActive}
-                  className={cn(
-                    isActive &&
-                      "bg-orange-50 text-orange-600! hover:bg-orange-100 hover:text-orange-700! dark:bg-orange-950 dark:text-orange-400! dark:hover:bg-orange-900 dark:hover:text-orange-300!"
-                  )}
                 >
                   <Link to={item.url}>
                     {item.icon}

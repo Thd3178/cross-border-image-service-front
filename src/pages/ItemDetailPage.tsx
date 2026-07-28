@@ -213,11 +213,11 @@ export default function ItemDetailPage() {
               <StatusBadge status={item.status} />
               <Badge
                 variant="outline"
-                className={
-                  isQwenTakeover
-                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400"
-                    : "bg-muted text-muted-foreground"
-                }
+                  className={
+                    isQwenTakeover
+                      ? "border-primary/40 bg-primary/10 text-primary dark:border-primary/50 dark:bg-primary/15 dark:text-primary"
+                      : "bg-muted text-muted-foreground"
+                  }
               >
                 {isQwenTakeover ? "视觉接管" : "原流程"}
               </Badge>
@@ -267,7 +267,7 @@ export default function ItemDetailPage() {
                 </ToggleGroupItem>
               </ToggleGroup>
               {isQwenTakeover ? (
-                <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                <p className="text-xs text-primary">
                   视觉接管：跳过分割/质检/合成，由 Qwen 直接编辑出图
                 </p>
               ) : (
@@ -447,7 +447,7 @@ function VerdictBadge({ verdict }: { verdict: Verdict }) {
     needs_inpaint: {
       variant: "outline",
       className:
-        "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-400",
+        "border-primary/40 bg-primary/10 text-primary dark:border-primary/50 dark:bg-primary/15 dark:text-primary",
       icon: "🩹",
     },
   }
@@ -469,7 +469,7 @@ function ProcessingPlaceholder({ label, className }: { label: string; className?
       <CardContent>
         <div className="flex aspect-square items-center justify-center rounded-xl bg-muted text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-2">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
             正在处理...
           </span>
         </div>

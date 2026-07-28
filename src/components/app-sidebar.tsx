@@ -20,7 +20,6 @@ import {
   RiSettingsLine,
   RiQuestionLine,
   RiAddCircleLine,
-  RiImageEditLine,
   RiUploadCloudLine,
 } from "@remixicon/react"
 import { useAuth } from "@/lib/auth-context"
@@ -93,7 +92,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <Link to="/dashboard">
-                <RiImageEditLine className="size-5!" />
+                <img
+                  src={`${import.meta.env.BASE_URL}logo.png`}
+                  alt="logo"
+                  className="size-5! object-contain"
+                />
                 <span className="text-base font-semibold">
                   行知澜ParaWave
                 </span>

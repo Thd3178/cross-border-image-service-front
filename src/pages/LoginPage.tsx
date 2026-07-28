@@ -66,18 +66,33 @@ export function LoginPage({
   return (
     <div
       className={cn(
-        "flex min-h-svh items-center justify-center",
+        "relative flex min-h-svh items-center justify-center overflow-hidden",
         className
       )}
       {...props}
     >
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        <Card>
+      {/* 全屏背景图 */}
+      <img
+        src={`${import.meta.env.BASE_URL}bg.png`}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+
+      {/* 半透明遮罩保证表单可读 */}
+      <div className="absolute inset-0 bg-black/50" />
+
+      <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-8 px-4">
+        {/* 站点标题 */}
+        <h1 className="text-center text-4xl font-bold tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]">
+          <span className="text-primary">并行·行知澜</span>智能平台 ParaWave
+        </h1>
+
+        <Card className="w-full border-white/10 bg-white/5 backdrop-blur-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">
+          <CardTitle className="text-xl text-white">
             {mode === "login" ? "欢迎回来" : "创建账号"}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-white/70">
             {mode === "login"
               ? "登录以管理您的商品图片"
               : "注册新账号以开始使用"}
@@ -178,7 +193,7 @@ export function LoginPage({
           </form>
         </CardContent>
       </Card>
-      <FieldDescription className="px-6 text-center">
+      <FieldDescription className="px-6 text-center text-white/70">
         点击继续即表示你同意我们的
         <a href="#">服务条款</a>和<a href="#">隐私政策</a>。
       </FieldDescription>

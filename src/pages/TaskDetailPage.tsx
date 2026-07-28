@@ -35,12 +35,12 @@ const STATUS_CONFIG: Record<
   SEARCHING: {
     label: "搜索中",
     className:
-      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+      "bg-primary/15 text-primary dark:bg-primary/20 dark:text-primary",
   },
   SEARCH_COMPLETED: {
     label: "搜索完成",
     className:
-      "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+      "bg-primary/20 text-primary dark:bg-primary/25 dark:text-primary",
   },
   USER_SELECTING: {
     label: "选择商品",
@@ -50,7 +50,7 @@ const STATUS_CONFIG: Record<
   PROCESSING: {
     label: "处理中",
     className:
-      "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   },
   PARTIAL_COMPLETED: {
     label: "部分完成",
@@ -350,13 +350,13 @@ function ProductCard({
             ¥{item.productPrice?.toFixed(2) ?? "0.00"}
           </p>
 
-          {/* 处理方式标签 (新增)：视觉接管=indigo / 原流程=muted */}
+            {/* 处理方式标签：视觉接管=primary 蓝 / 原流程=muted */}
           <Badge
             variant="outline"
             className={cn(
               "self-start",
               item.processingMode === "QWEN_TAKEOVER"
-                ? "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
+                ? "bg-primary/10 text-primary border-primary/20"
                 : "bg-muted text-muted-foreground"
             )}
           >
@@ -727,7 +727,7 @@ export default function TaskDetailPage() {
               <Button
                 onClick={handleQwenTakeover}
                 disabled={submitting || qwenSubmitting || selectedIds.size === 0}
-                className="border border-indigo-300 bg-indigo-500 text-white hover:bg-indigo-600 hover:text-white dark:border-indigo-500"
+                className="border border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
               >
                 {qwenSubmitting ? "提交中..." : "Qwen 视觉模型全权接管"}
               </Button>

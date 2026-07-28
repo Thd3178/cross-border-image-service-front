@@ -20,8 +20,8 @@ export default function GuidePage() {
           <ol className="list-decimal space-y-1.5 pl-6">
             <li>
               在「快速创建」页面粘贴 1688 商品搜索链接，后端搜索商品，状态变为{" "}
-              <Badge variant="outline" className="bg-blue-100 text-blue-700">搜索中</Badge> →{" "}
-              <Badge variant="outline" className="bg-cyan-100 text-cyan-700">搜索完成</Badge>
+              <Badge variant="outline" className="bg-primary/15 text-primary">搜索中</Badge> →{" "}
+              <Badge variant="outline" className="bg-primary/20 text-primary">搜索完成</Badge>
             </li>
             <li>
               在「任务详情」页面勾选需要处理的商品，每张商品卡支持两种处理模式：
@@ -32,7 +32,7 @@ export default function GuidePage() {
             </li>
             <li>
               点击「开始处理选中商品」或「Qwen 视觉模型全权接管」，任务状态变为{" "}
-              <Badge variant="outline" className="bg-purple-100 text-purple-700">处理中</Badge>，顶部流水线步骤图每 5 秒轮询刷新
+              <Badge variant="outline" className="bg-amber-100 text-amber-700">处理中</Badge>，顶部流程进度每 5 秒轮询刷新
             </li>
             <li>
               业务侧三态终态：
@@ -65,22 +65,22 @@ export default function GuidePage() {
               <tbody className="divide-y">
                 <tr>
                   <td className="py-2 pr-4">阿里云图像分割</td>
-                  <td className="py-2 pr-4 tabular-nums">¥0.002 / 次</td>
+                  <td className="py-2 pr-4 tabular-nums">¥0.02 / 次</td>
                   <td className="py-2">原流程每个商品 1 次</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4">豆包 Doubao 输入 Token</td>
-                  <td className="py-2 pr-4 tabular-nums">¥0.20 / 百万 tokens</td>
-                  <td className="py-2">原流程质检阶段</td>
-                </tr>
-                <tr>
-                  <td className="py-2 pr-4">豆包 Doubao 输出 Token</td>
                   <td className="py-2 pr-4 tabular-nums">¥2.00 / 百万 tokens</td>
                   <td className="py-2">原流程质检阶段</td>
                 </tr>
                 <tr>
+                  <td className="py-2 pr-4">豆包 Doubao 输出 Token</td>
+                  <td className="py-2 pr-4 tabular-nums">¥20.00 / 百万 tokens</td>
+                  <td className="py-2">原流程质检阶段</td>
+                </tr>
+                <tr>
                   <td className="py-2 pr-4">Qwen-image-2.0 视觉接管</td>
-                  <td className="py-2 pr-4 tabular-nums">¥0.20 / 张</td>
+                  <td className="py-2 pr-4 tabular-nums">¥2.00 / 张</td>
                   <td className="py-2">Qwen 接管模式每个商品 1 张</td>
                 </tr>
                 <tr>
@@ -92,8 +92,8 @@ export default function GuidePage() {
             </table>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            示例：N 个商品走原流程全部一次通过 = (0.002 × N) + (0.20 × P_in + 2.00 × P_out) ；
-            N 个商品走 Qwen 视觉接管 = 0.20 × N。每张图的费用由后端在「总支出」中累计，仪表盘「总支出」按从使用系统起 all-time 累计。
+            示例：N 个商品走原流程全部一次通过 = (0.02 × N) + (2.00 × P_in + 20.00 × P_out) ；
+            N 个商品走 Qwen 视觉接管 = 2.00 × N。每张图的费用由后端在「总支出」中累计，仪表盘「总支出」按从使用系统起 all-time 累计。
           </p>
         </CardContent>
       </Card>

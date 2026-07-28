@@ -16,10 +16,10 @@ export const STATUS_CONFIG: Record<
 
 export const STATUS_COLORS: Record<TaskStatus, string> = {
   PENDING: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-  SEARCHING: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  SEARCH_COMPLETED: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+  SEARCHING: "bg-primary/10 text-primary border-primary/20",
+  SEARCH_COMPLETED: "bg-primary/15 text-primary border-primary/30",
   USER_SELECTING: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  PROCESSING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  PROCESSING: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   PARTIAL_COMPLETED: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   COMPLETED: "bg-green-500/10 text-green-500 border-green-500/20",
   FAILED: "bg-red-500/10 text-red-500 border-red-500/20",
