@@ -19,6 +19,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { RiMore2Line, RiUserLine, RiBankCardLine, RiNotification3Line, RiLogoutBoxLine } from "@remixicon/react"
+import { useAuth } from "@/lib/auth-context"
+import { useNavigate } from "react-router-dom"
 
 export function NavUser({
   user,
@@ -30,6 +32,13 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate("/login", { replace: true })
+  }
 
   return (
     <SidebarMenu>
@@ -92,7 +101,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
               <RiLogoutBoxLine
               />
               退出登录

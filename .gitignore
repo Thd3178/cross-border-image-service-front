@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Tool working dirs (not source)
+.playwright-mcp/
+.omo/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

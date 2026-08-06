@@ -88,15 +88,7 @@ export default function QuickCreatePage() {
     setIsUploading(true)
     try {
       const bgId = selectedBgId ? Number(selectedBgId) : undefined
-      const res = await imageApi.upload(selectedFile, {
-        backgroundId: bgId,
-        keyword: keyword || undefined,
-        priceMin: priceMin ? Number(priceMin) : undefined,
-        priceMax: priceMax ? Number(priceMax) : undefined,
-        sortFields: sortFields || undefined,
-        category: category || undefined,
-        tags: tags || undefined,
-      })
+      const res = await imageApi.upload(selectedFile, bgId)
       const data = res.data.data
       toast.success(data.message || "上传成功，正在搜索...")
       setSelectedFile(null)

@@ -1,21 +1,26 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { imageApi, type DashboardStats } from "@/lib/api"
+import { adminApi, imageApi, type DashboardStats } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
 import { SectionCards } from "@/components/section-cards"
 import { CostDailyCharts } from "@/components/cost-daily-charts"
 
 export default function DashboardPage() {
+  const { isAdmin } = useAuth()
   // ── Dashboard stats ──
   const [stats, setStats] = useState<DashboardStats | null>(null)
 
   // ── Fetch dashboard stats ──
+  // admin 看全站口径 (无 userId 过滤), 普通用户看自己口径
   useEffect(() => {
-    imageApi
-      .stats()
+    const req = isAdmin ? adminApi.dashboardStats() : imageApi.stats()
+    req
       .then((res) => setStats(res.data.data))
-      .catch((err: Error) => toast.error("加载统计数据失败", { description: err.message }))
-  }, [])
+      .catch((err: Error) =>
+        toast.error("加载统计数据失败", { description: err.message })
+      )
+  }, [isAdmin])
 
   return (
     <div className="flex w-full flex-col gap-6 p-4 md:p-6 @container" style={{ containerName: "main" }}>
