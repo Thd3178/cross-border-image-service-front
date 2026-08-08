@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
+import { TaskItemProductFields } from "@/components/task-item-product-fields"
 import {
   Card,
   CardContent,
@@ -364,6 +365,8 @@ function ProductCard({
           >
             {item.processingMode === "QWEN_TAKEOVER" ? "视觉接管" : "原流程"}
           </Badge>
+
+          <TaskItemProductFields item={item} compact />
 
           {/* View detail button */}
           {viewDetailMode && (

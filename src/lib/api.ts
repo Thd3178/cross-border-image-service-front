@@ -66,6 +66,8 @@ export interface Task {
 }
 
 export interface TaskItem {
+  /** 后端会透传 1688 商品的扩展字段，保留未知字段避免前端主动丢失。 */
+  [key: string]: unknown
   id: number
   taskId: number
   sortOrder: number
@@ -90,6 +92,52 @@ export interface TaskItem {
   /** Qwen 视觉接管成本（元），仅 QWEN_TAKEOVER 模式产生 */
   qwenCostYuan?: number
   createdAt: string
+}
+
+const TASK_ITEM_NON_PRODUCT_FIELDS = new Set([
+  "id",
+  "taskId",
+  "sortOrder",
+  "segmentedImgUrl",
+  "isCentered",
+  "isSquare",
+  "cropRect",
+  "hasViolations",
+  "violations",
+  "overallVerdict",
+  "finalImgUrl",
+  "status",
+  "errorMsg",
+  "userSelected",
+  "processingMode",
+  "qwenCostYuan",
+  "createdAt",
+  "productTitle",
+  "productImgUrl",
+  "productPrice",
+])
+
+/** 返回 1688 商品附加字段，字段名保持后端原样。 */
+export function getTaskItemAdditionalProductFields(
+  item: TaskItem
+): Array<[string, unknown]> {
+  return Object.entries(item).filter(
+    ([key, value]) =>
+      !TASK_ITEM_NON_PRODUCT_FIELDS.has(key) &&
+      value !== null &&
+      value !== undefined &&
+      value !== ""
+  )
+}
+
+export function formatTaskItemFieldValue(value: unknown): string {
+  if (typeof value === "string") return value
+  if (typeof value === "number" || typeof value === "boolean") return String(value)
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
 }
 
 export interface BackgroundImage {

@@ -8,6 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { RiArrowGoBackLine } from "@remixicon/react"
+import { TaskItemProductFields } from "@/components/task-item-product-fields"
 
 // ─── Constants ───
 
@@ -304,24 +305,27 @@ export default function ItemDetailPage() {
 
         {/* Row 3: 商品信息 */}
         <Card>
-          <CardContent className="p-4 flex flex-wrap gap-6">
+          <CardContent className="space-y-4 p-4">
             <CardHeaderCompact title="商品信息" />
-            {item.productTitle ? (
-              <div>
-                <p className="text-xs text-muted-foreground">商品标题</p>
-                <p className="text-sm font-medium">{item.productTitle}</p>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">暂无商品标题</p>
-            )}
-            {item.productPrice != null && (
-              <div>
-                <p className="text-xs text-muted-foreground">商品价格</p>
-                <p className="text-sm font-medium">
-                  {item.productPrice}元
-                </p>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-6">
+              {item.productTitle ? (
+                <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+                  <p className="text-xs text-muted-foreground">商品标题</p>
+                  <p className="break-words text-sm font-medium">{item.productTitle}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">暂无商品标题</p>
+              )}
+              {item.productPrice != null && (
+                <div>
+                  <p className="text-xs text-muted-foreground">商品价格</p>
+                  <p className="text-sm font-medium">
+                    {item.productPrice}元
+                  </p>
+                </div>
+              )}
+            </div>
+            <TaskItemProductFields item={item} />
           </CardContent>
         </Card>
       </div>

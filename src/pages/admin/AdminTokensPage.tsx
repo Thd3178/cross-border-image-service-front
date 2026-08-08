@@ -3,6 +3,7 @@ import { adminApi } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { RiEyeLine, RiEyeOffLine, RiRefreshLine } from "@remixicon/react"
@@ -147,6 +148,7 @@ export default function AdminTokensPage() {
 
   const renderCard = (t: TokenDef) => {
     const s = states[t.key]
+    const isPrompt = t.key.endsWith("-prompt")
     return (
       <Card key={t.key}>
         <CardHeader>
@@ -164,18 +166,33 @@ export default function AdminTokensPage() {
         <CardContent className="space-y-3">
           {s.editing ? (
             <div className="space-y-2">
-              <Input
-                type="password"
-                value={s.draft}
-                onChange={(e) =>
-                  setStates((prev) => ({
-                    ...prev,
-                    [t.key]: { ...prev[t.key], draft: e.target.value },
-                  }))
-                }
-                placeholder={`输入新的 ${t.label}`}
-                className="font-mono text-xs"
-              />
+              {isPrompt ? (
+                <Textarea
+                  value={s.draft}
+                  onChange={(e) =>
+                    setStates((prev) => ({
+                      ...prev,
+                      [t.key]: { ...prev[t.key], draft: e.target.value },
+                    }))
+                  }
+                  placeholder={`输入新的 ${t.label}`}
+                  rows={8}
+                  className="min-h-40 resize-y whitespace-pre-wrap break-words font-mono text-xs"
+                />
+              ) : (
+                <Input
+                  type="password"
+                  value={s.draft}
+                  onChange={(e) =>
+                    setStates((prev) => ({
+                      ...prev,
+                      [t.key]: { ...prev[t.key], draft: e.target.value },
+                    }))
+                  }
+                  placeholder={`输入新的 ${t.label}`}
+                  className="font-mono text-xs"
+                />
+              )}
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => handleSave(t)} disabled={s.saving || !s.draft.trim()}>
                   {s.saving ? "保存中…" : "保存"}
@@ -195,9 +212,18 @@ export default function AdminTokensPage() {
               {s.revealed ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <code className="block flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">
-                      {s.revealed}
-                    </code>
+                    {isPrompt ? (
+                      <Textarea
+                        readOnly
+                        value={s.revealed}
+                        rows={8}
+                        className="min-h-40 flex-1 resize-y whitespace-pre-wrap break-words bg-muted font-mono text-xs"
+                      />
+                    ) : (
+                      <code className="block flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">
+                        {s.revealed}
+                      </code>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
