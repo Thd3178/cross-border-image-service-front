@@ -158,29 +158,14 @@ export default function ItemDetailPage() {
         <h1 className="text-lg font-medium">商品详情</h1>
       </div>
 
-      {/* ── 三卡横排对比 (原图 / 分割结果或占位 / 最终合成或Qwen编辑) ── */}
-      {/* 卡间分割线: 第 2、3 卡左边加 border-l */}
-      <div className="mb-6 grid grid-cols-1 gap-0 md:grid-cols-3 md:divide-x md:divide-border">
-        <ImageCard title="原始图片" url={item.productImgUrl} className="md:pr-4" />
-
-        {isQwenTakeover ? (
-          /* QWEN_TAKEOVER 模式: 中间格 = 空占位 ("未使用分割"); 第三格 = Qwen 编辑结果 */
+      {/* ── 卡片横排对比: 原图 / 分割结果或占位 / 修复结果 / 最终合成或Qwen编辑 ── */}
+      {/* 卡间分割线: 第 2、3、4 卡左边加 border-l (md:divide-x 实现) */}
+      {/* QWEN_TAKEOVER 模式不走 inpaint, 退到三卡布局 (原图 / 空占位 / Qwen编辑) */}
+      {isQwenTakeover ? (
+        <div className="mb-6 grid grid-cols-1 gap-0 md:grid-cols-3 md:divide-x md:divide-border">
+          <ImageCard title="原始图片" url={item.productImgUrl} className="md:pr-4" />
           <EmptyImageCard title="分割结果" note="此模式不使用分割" className="md:px-4" />
-        ) : (
-          <ImageCard
-            title="分割结果"
-            url={item.segmentedImgUrl}
-            className="md:px-4"
-            placeholder={
-              item.status === "SEGMENTING"
-                ? "分割中..."
-                : "暂无分割结果"
-            }
-          />
-        )}
-
-        {isQwenTakeover ? (
-          item.status === "QWEN_EDITING" ? (
+          {item.status === "QWEN_EDITING" ? (
             <ProcessingPlaceholder label="Qwen 编辑结果" className="md:pl-4" />
           ) : (
             <ImageCard
@@ -189,20 +174,50 @@ export default function ItemDetailPage() {
               className="md:pl-4"
               placeholder="暂无 Qwen 编辑结果"
             />
-          )
-        ) : (
+          )}
+        </div>
+      ) : (
+        <div className="mb-6 grid grid-cols-1 gap-0 md:grid-cols-4 md:divide-x md:divide-border">
+          <ImageCard title="原始图片" url={item.productImgUrl} className="md:pr-4" />
+
+          <ImageCard
+            title="分割结果"
+            url={item.segmentedImgUrl}
+            className="md:px-4"
+            placeholder={
+              item.status === "SEGMENTING" ? "分割中..." : "暂无分割结果"
+            }
+          />
+
+          {item.inpaintedImgUrl ? (
+            <ImageCard
+              title="修复结果"
+              url={item.inpaintedImgUrl}
+              className="md:px-4"
+              placeholder={
+                item.status === "INPAINTING" ? "修复中..." : "暂无修复结果"
+              }
+            />
+          ) : item.status === "INPAINTING" ? (
+            <ProcessingPlaceholder label="修复结果" className="md:px-4" />
+          ) : (
+            <EmptyImageCard
+              title="修复结果"
+              note="无需修复"
+              className="md:px-4"
+            />
+          )}
+
           <ImageCard
             title="最终合成"
             url={item.finalImgUrl}
             className="md:pl-4"
             placeholder={
-              item.status === "COMPOSITING"
-                ? "合成中..."
-                : "暂无最终合成"
+              item.status === "COMPOSITING" ? "合成中..." : "暂无最终合成"
             }
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── 信息区: 状态/模式一行 + 质检一行 + 商品一行；错误附在状态行旁 ── */}
       <div className="flex flex-col gap-4">
@@ -514,10 +529,15 @@ function NotFoundState() {
 function ItemDetailSkeleton() {
   return (
     <div className="container mx-auto p-6">
-      {/* 三卡横排骨架 */}
-      <div className="grid grid-cols-1 gap-0 md:grid-cols-3 md:divide-x md:divide-border">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className={i === 1 ? "md:pr-4" : i === 2 ? "md:px-4" : "md:pl-4"}>
+      {/* 四卡横排骨架 */}
+      <div className="grid grid-cols-1 gap-0 md:grid-cols-4 md:divide-x md:divide-border">
+        {[1, 2, 3, 4].map((i) => (
+          <Card
+            key={i}
+            className={
+              i === 1 ? "md:pr-4" : i === 4 ? "md:pl-4" : "md:px-4"
+            }
+          >
             <CardHeader>
               <Skeleton className="h-5 w-20" />
             </CardHeader>

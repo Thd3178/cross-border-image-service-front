@@ -77,6 +77,8 @@ export interface TaskItem {
   productPrice?: number
   productDetailUrl?: string
   segmentedImgUrl?: string
+  /** Inpaint 修复结果图 URL（跳过修复时为空，与 finalImgUrl 区别：未做背景合成） */
+  inpaintedImgUrl?: string
   isCentered?: boolean
   isSquare?: boolean
   cropRect?: string
@@ -99,6 +101,7 @@ const TASK_ITEM_NON_PRODUCT_FIELDS = new Set([
   "taskId",
   "sortOrder",
   "segmentedImgUrl",
+  "inpaintedImgUrl",
   "isCentered",
   "isSquare",
   "cropRect",
