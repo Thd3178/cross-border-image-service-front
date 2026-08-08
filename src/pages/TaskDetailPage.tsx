@@ -42,11 +42,6 @@ const STATUS_CONFIG: Record<
     className:
       "bg-primary/20 text-primary dark:bg-primary/25 dark:text-primary",
   },
-  USER_SELECTING: {
-    label: "选择商品",
-    className:
-      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  },
   PROCESSING: {
     label: "处理中",
     className:
@@ -91,7 +86,6 @@ function formatDateTime(dateStr: string): string {
 
 const ALLOW_ITEMS_STATUSES: ReadonlySet<TaskStatus> = new Set([
   "SEARCH_COMPLETED",
-  "USER_SELECTING",
   "PROCESSING",
   "PARTIAL_COMPLETED",
   "COMPLETED",
@@ -317,7 +311,15 @@ function ProductCard({
           />
 
           {/* 状态印章：非选择模式下，对 PENDING 以外的所有状态显示在图片右上角，旋转 -12deg, 双边框, 文字粗体 */}
-          {!selectingMode && (() => {
+          {/* 印章逻辑:
+              selectingMode (SEARCH_COMPLETED / PARTIAL_COMPLETED) 下整页停在选择模式,
+              此时未终态 item 显示 checkbox 不显印章; 但已终态 (COMPLETED / FAILED / CANCELLED)
+              item 不可选, 需保留印章让用户看到该 item 真实状态而非被 disabled checkbox 遮蔽.
+              问题 1 根因: 原条件 !selectingMode 把终态 item 印章也Suppress掉了. */}
+          {(!selectingMode
+            || item.status === "COMPLETED"
+            || item.status === "FAILED"
+            || item.status === "CANCELLED") && (() => {
             const status = item.status
             if (status === "PENDING") return null
             const label = ITEM_STATUS_LABEL[status] ?? status
@@ -401,6 +403,14 @@ export default function TaskDetailPage() {
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // 轮询时不要把用户本地勾的 selectedIds 擦掉.
+  // 问题 11 根因: fetchTask 每次都用 server-side userSelected 重建 selectedIds,
+  // 用户勾完未提交的 checkbox 在下个 5s 轮询被擦掉, 表现为"必须很快操作否则自动取消".
+  // 策略: 只在初次 hydrate / 进入 selectingMode 时用 server 状态全量重建;
+  // 在 selectingMode 期间后续轮询只把"server 标 userSelected=true 且本地未选"的合并进来,
+  // 不擦用户本地未提交的选择; 离开 selectingMode 重置 flag 下次重新 hydrate.
+  const selectedIdsHydratedRef = useRef(false)
+
   // ── Data fetching ──
 
   const fetchTask = useCallback(async () => {
@@ -412,30 +422,61 @@ export default function TaskDetailPage() {
     try {
       const res = await imageApi.taskDetail(numericTaskId)
       const data = res.data.data
-      setTask(data)
-      setError(null)
 
-      // Items may be included directly in the task detail response
+      // 在 setSelectedIds 前算好 server-side 已确认勾选的 id 集合 — 问题 11
+      let fetchedItems: TaskItem[] = []
       if (data.items && data.items.length > 0) {
-        setItems(data.items)
-        setSelectedIds(
-          new Set(
-            data.items.filter((i) => i.userSelected).map((i) => i.id)
-          )
-        )
-      }
-      // If the status allows items but none came with the task, fetch separately
-      else if (ALLOW_ITEMS_STATUSES.has(data.status)) {
+        fetchedItems = data.items
+      } else if (ALLOW_ITEMS_STATUSES.has(data.status)) {
         const itemsRes = await imageApi.taskItems(numericTaskId)
-        const itemData = itemsRes.data.data
-        setItems(itemData)
-        setSelectedIds(
-          new Set(itemData.filter((i) => i.userSelected).map((i) => i.id))
-        )
+        fetchedItems = itemsRes.data.data
       }
+
+      const nowSelecting =
+        data.status === "SEARCH_COMPLETED" || data.status === "PARTIAL_COMPLETED"
+
+      // 问题 11: 修复轮询擦掉用户未提交勾选的"自动取消"现象.
+      //   - 离开 selectingMode → 重置 hydrate flag, 后续 setItems 顺手全量重建 selectedIds.
+      //   - 首次进 selectingMode (hydrated=false) → 用 server 的 userSelected 全量 hydrate.
+      //   - selectingMode 后续轮询 (hydrated=true) → 不擦, 只把 server 新增 userSelected=true 的
+      //     (本地未选) 合并进来; 保留用户本地未提交的选择.
+      if (!nowSelecting) {
+        selectedIdsHydratedRef.current = false
+        setTask(data)
+        setItems(fetchedItems)
+        setSelectedIds(
+          new Set(fetchedItems.filter((i) => i.userSelected).map((i) => i.id))
+        )
+        setError(null)
+        setLoading(false)
+        return
+      }
+
+      const serverConfirmed = new Set(
+        fetchedItems.filter((i) => i.userSelected).map((i) => i.id)
+      )
+
+      setTask(data)
+      setItems(fetchedItems)
+
+      if (selectedIdsHydratedRef.current) {
+        // 选择模式期间的后续轮询: merge server 新增, 不擦本地未提交选择
+        setSelectedIds((prev) => {
+          const merged = new Set(prev)
+          for (const id of serverConfirmed) {
+            if (!merged.has(id)) merged.add(id)
+          }
+          return merged
+        })
+      } else {
+        // 首次进 selectingMode 或刚进: 用 server 数据全量 hydrate
+        selectedIdsHydratedRef.current = true
+        setSelectedIds(serverConfirmed)
+      }
+      setError(null)
+      setLoading(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载任务失败")
-    } finally {
       setLoading(false)
     }
   }, [taskId, numericTaskId])
@@ -447,9 +488,14 @@ export default function TaskDetailPage() {
     fetchTask()
   }, [fetchTask])
 
-  // Poll every 5s when searching or processing (so progress stays live)
+  // Poll every 5s while task is in any non-terminal status.
+  // 关键: SEARCH_COMPLETED / PARTIAL_COMPLETED 也要轮询 — 用户提交 selectItems
+  // 后, 后端 @Async 把 task 推到 PROCESSING, 前端必须用轮询捕获这个状态推进,
+  // 否则页面停在 selectingMode 永远看不到处理进度 / 完成结果 (问题 6 根因).
+  // 终态 (COMPLETED / FAILED) 停止轮询.
   useEffect(() => {
-    if (task?.status === "SEARCHING" || task?.status === "PROCESSING") {
+    const isTerminal = task?.status === "COMPLETED" || task?.status === "FAILED"
+    if (task && !isTerminal) {
       pollRef.current = setInterval(() => {
         fetchTask()
       }, 5000)
@@ -464,7 +510,7 @@ export default function TaskDetailPage() {
 
   // ── Derived state ──
 
-  const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "USER_SELECTING" || task?.status === "PARTIAL_COMPLETED"
+  const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "PARTIAL_COMPLETED"
   // "查看详情" 按钮: 处理中、部分完成、全部完成、失败 都该显示.
   // 之前漏了 PARTIAL_COMPLETED, 导致部分完成的已 COMPLETED item 看不到详情入口.
   // 失败时也显示, 让用户能看到每个 item 的 errorMsg 根因。
@@ -521,8 +567,15 @@ export default function TaskDetailPage() {
 
     setSubmitting(true)
     try {
-      await imageApi.selectItems(numericTaskId, safeIds)
-      toast.success("已提交处理请求")
+      const res = await imageApi.selectItems(numericTaskId, safeIds)
+      // 后端区分 SATURATED (系统繁忙, 未触发 processTask) vs PROCESSING (已开始处理).
+      // 旧代码无脑 toast.success, 用户在饱和短路时以为提交成功实则没动.
+      const status = (res.data?.data as unknown as { status?: string } | undefined)?.status
+      if (status === "SATURATED") {
+        toast.error("系统繁忙, 暂不接受新处理请求, 请稍后重试")
+      } else {
+        toast.success("已提交处理请求")
+      }
       await fetchTask()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "提交失败")

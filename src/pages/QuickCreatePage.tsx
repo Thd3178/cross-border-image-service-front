@@ -67,9 +67,11 @@ export default function QuickCreatePage() {
     )
     if (!hasInProgress) return
 
+    // 进度状态轮询 5s — 问题 2 原来是 30s 导致搜索完成显示明显延迟
+    // (后端 1688 搜索通常几秒~十几秒完成, 30s 间隔让用户多等将近一个 tick)
     const interval = setInterval(() => {
       fetchTasks(currentPage)
-    }, 30000)
+    }, 5000)
     return () => clearInterval(interval)
   }, [tasks, currentPage, fetchTasks])
 

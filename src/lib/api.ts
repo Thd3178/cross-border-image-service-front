@@ -6,7 +6,6 @@ export type TaskStatus =
   | "PENDING"
   | "SEARCHING"
   | "SEARCH_COMPLETED"
-  | "USER_SELECTING"
   | "PROCESSING"
   | "PARTIAL_COMPLETED"
   | "COMPLETED"
