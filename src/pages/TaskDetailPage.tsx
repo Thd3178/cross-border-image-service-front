@@ -20,7 +20,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card"
-import { RiArrowGoBackLine, RiRefreshLine, RiDownloadLine } from "@remixicon/react"
+import { RiArrowGoBackLine, RiRefreshLine, RiDownloadLine, RiLoader4Line } from "@remixicon/react"
 
 // ─── Status display config ───
 
@@ -514,6 +514,17 @@ export default function TaskDetailPage() {
   // ── Derived state ──
 
   const selectingMode = task?.status === "SEARCH_COMPLETED" || task?.status === "PARTIAL_COMPLETED"
+
+  // 防二次点击兜底: 两个提交按钮成功后不在 finally 里立即解锁 (留 loading 锁住
+  // 防止在 fetchTask 刷新窗口内重复触发 selectItems), 而是等 task 状态离开
+  // selectingMode 后由这里统一解锁. 任何能使页面离开选择模式的状态推进
+  // (PROCESSING / COMPLETED / FAILED / 后端直接跳其它状态) 都会触发解锁.
+  useEffect(() => {
+    if (!selectingMode) {
+      if (submitting) setSubmitting(false)
+      if (qwenSubmitting) setQwenSubmitting(false)
+    }
+  }, [selectingMode, submitting, qwenSubmitting])
   // "查看详情" 按钮: 处理中、部分完成、全部完成、失败 都该显示.
   // 之前漏了 PARTIAL_COMPLETED, 导致部分完成的已 COMPLETED item 看不到详情入口.
   // 失败时也显示, 让用户能看到每个 item 的 errorMsg 根因。
@@ -576,13 +587,20 @@ export default function TaskDetailPage() {
       const status = (res.data?.data as unknown as { status?: string } | undefined)?.status
       if (status === "SATURATED") {
         toast.error("系统繁忙, 暂不接受新处理请求, 请稍后重试")
+        // 饱和短路: 后端没动 task, 立即解锁让用户重试
+        setSubmitting(false)
       } else {
         toast.success("已提交处理请求")
+        // 不立即解锁: 等轮询拿到 task 状态离开 selectingMode (SEARCH_COMPLETED /
+        // PARTIAL_COMPLETED) 才由 useEffect 解锁, 在此期间按钮保持 loading
+        // 防止用户在 fetchTask 刷新前的窗口内重复点击触发 selectItems.
+        await fetchTask()
+        // fetchTask 后若后端状态推进已离开 selectingMode, useEffect 会解锁;
+        // 若仍在 selectingMode (后端异步未推进完), 保持锁定等下一轮轮询解锁.
       }
-      await fetchTask()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "提交失败")
-    } finally {
+      // 失败立即解锁, 不阻塞用户重试
       setSubmitting(false)
     }
   }
@@ -616,6 +634,7 @@ export default function TaskDetailPage() {
       )
       if (ids.length === 0) {
         toast.warning("已完成的商品不可再次处理")
+        setQwenSubmitting(false)
         return
       }
       const mode: ProcessingMode = "QWEN_TAKEOVER"
@@ -627,6 +646,7 @@ export default function TaskDetailPage() {
       const failedIds = ids.filter((_, i) => results[i].status === "rejected")
       if (failedIds.length > 0) {
         toast.error(`有 ${failedIds.length} 个商品切换模式失败, 已终止提交`)
+        setQwenSubmitting(false)
         return
       }
 
@@ -640,9 +660,11 @@ export default function TaskDetailPage() {
         )
       )
       await fetchTask()
+      // 防二次点击: 同 handleSelectItems, 不在 finally 里立即解锁,
+      // 等 task 状态离开 selectingMode 由 useEffect 统一解锁.
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Qwen 接管提交失败")
-    } finally {
+      // 失败立即解锁, 不阻塞用户重试
       setQwenSubmitting(false)
     }
   }
@@ -778,6 +800,9 @@ export default function TaskDetailPage() {
                 onClick={handleSelectItems}
                 disabled={submitting || qwenSubmitting || selectedIds.size === 0}
               >
+                {submitting && (
+                  <RiLoader4Line className="mr-1 size-4 animate-spin" />
+                )}
                 {submitting ? "提交中..." : "开始处理选中商品"}
               </Button>
               <Button
@@ -785,6 +810,9 @@ export default function TaskDetailPage() {
                 disabled={submitting || qwenSubmitting || selectedIds.size === 0}
                 className="border border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
               >
+                {qwenSubmitting && (
+                  <RiLoader4Line className="mr-1 size-4 animate-spin" />
+                )}
                 {qwenSubmitting ? "提交中..." : "Qwen 视觉模型全权接管"}
               </Button>
             </>

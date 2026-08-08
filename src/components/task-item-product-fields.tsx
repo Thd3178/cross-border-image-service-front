@@ -3,6 +3,8 @@ import {
   getTaskItemAdditionalProductFields,
   type TaskItem,
 } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { RiExternalLinkLine } from "@remixicon/react"
 
 interface TaskItemProductFieldsProps {
   item: TaskItem
@@ -32,14 +34,22 @@ export function TaskItemProductFields({
           <div key={key} className="min-w-0">
             <p className="text-xs text-muted-foreground">{key}</p>
             {isUrl ? (
-              <a
-                href={value}
-                target="_blank"
-                rel="noreferrer"
-                className="break-all text-sm text-primary underline-offset-4 hover:underline"
+              <Button
+                asChild
+                variant="outline"
+                size={compact ? "xs" : "sm"}
+                className="mt-0.5"
               >
-                {text}
-              </a>
+                <a
+                  href={value}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gap-1"
+                >
+                  <RiExternalLinkLine className="size-3.5" />
+                  点击前往 1688 查看
+                </a>
+              </Button>
             ) : (
               <p className="whitespace-pre-wrap break-words text-sm text-foreground">
                 {text}
